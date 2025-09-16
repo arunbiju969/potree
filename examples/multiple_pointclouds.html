@@ -1,3 +1,17 @@
+	<script>
+		// Ensure render area fills the space if height profile is hidden on load
+		$(function() {
+			$('#potree_render_area').css('bottom', '0px');
+			// Single close button: closes both the Potree profile window and the custom panel
+			$('#height_profile_close').on('click', function() {
+				if (window.viewer && viewer.profileWindow) {
+					viewer.profileWindow.hide();
+				}
+				$('#height_profile_container').hide();
+				$('#potree_render_area').css('bottom', '0px');
+			});
+		});
+	</script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,19 +21,34 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 	<title>Potree Viewer</title>
 
+	<link href="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.css" rel="stylesheet" />
 	<link rel="stylesheet" type="text/css" href="../build/potree/potree.css">
 	<link rel="stylesheet" type="text/css" href="../libs/jquery-ui/jquery-ui.min.css">
 	<link rel="stylesheet" type="text/css" href="../libs/openlayers3/ol.css">
 	<link rel="stylesheet" type="text/css" href="../libs/spectrum/spectrum.css">
 	<link rel="stylesheet" type="text/css" href="../libs/jstree/themes/mixed/style.css">
+	
+
+	
+	
+	<style>
+		/* Ensure sidebar is always visible and render area is properly positioned */
+		#potree_sidebar_container {
+			display: block !important;
+			width: 400px !important;
+		}
+		
+		#potree_render_area {
+			left: 400px !important;
+		}
+	</style>
 </head>
 
 <body>
+	<script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
 	<script src="../libs/jquery/jquery-3.1.1.min.js"></script>
 	<script src="../libs/spectrum/spectrum.js"></script>
 	<script src="../libs/jquery-ui/jquery-ui.min.js"></script>
-	
-	
 	<script src="../libs/other/BinaryHeap.js"></script>
 	<script src="../libs/tween/tween.min.js"></script>
 	<script src="../libs/d3/d3.js"></script>
@@ -34,7 +63,44 @@
 	<!-- INCLUDE SETTINGS HERE -->
 	
 	<div class="potree_container" style="position: absolute; width: 100%; height: 100%; left: 0px; top: 0px; ">
-		<div id="potree_render_area" style="background-image: url('../build/potree/resources/images/background.jpg');"></div>
+	<div id="potree_render_area" style="position: absolute; top: 0; left: 400px; right: 0; background-image: url('../build/potree/resources/images/background.jpg'); border: 2px solid #2b82ff; box-sizing: border-box; z-index: 50;"></div>
+
+		<!-- Height profile container: anchored to bottom, confined to render area (does not cross sidebar) -->
+		<div id="height_profile_container" style="
+			position: absolute;
+			left: 400px; /* match sidebar width so it doesn't cross into the sidebar */
+			right: 0px;
+			bottom: 0px;
+			height: 28%;
+			background: rgba(82, 15, 15, 0.6);
+			color: #ddd;
+			border: 2px solid rgba(255,0,0,0.9);
+			border-top: 3px solid rgba(255,0,0,0.95);
+			box-sizing: border-box;
+			padding: 8px;
+			z-index: 60; /* above render area but below top toolbar */
+			display: none;
+			">
+			<!-- titlebar: drag this to resize the profile window height -->
+			<div id="height_profile_titlebar" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; cursor: ns-resize; padding: 4px 2px; user-select: none;">
+				<strong>Height Profile</strong>
+				<!-- close button: hides the profile panel -->
+				<button id="height_profile_close" aria-label="Close height profile" style="background: transparent; border: none; color: #ddd; font-size: 1.1em; padding: 4px 8px; cursor: pointer;">✕</button>
+			</div>
+							 <!-- Potree profile window will be embedded here -->
+							 <div id="myProfilePanel" style="border: 2px solid #00a6ff; box-sizing: border-box; position: relative; height: calc(100% - 62px); overflow: hidden;">
+								 
+							 </div>
+		</div>
+
+		<!-- Top toolbar overlay (empty placeholder - buttons will be added later) -->
+	<div id="top_toolbar" aria-label="Top toolbar" style="left: auto; right: 20px; width: auto;" class="absolute top-2 h-11 z-50 inline-flex items-center px-3 gap-2 bg-gray-800 bg-opacity-60 rounded-md shadow-md">
+			<div id="top_toolbar_inner" class="flex items-center gap-2">
+				<!-- toolbar buttons go here -->
+				<button id="openPointcloudBtn" class="btn btn-primary text-white px-3 py-1 rounded">Open pointcloud</button>
+			</div>
+		</div>
+
 		<div id="potree_sidebar_container"> </div>
 	</div>
 	
@@ -50,106 +116,250 @@
 		viewer.setMinNodeSize(10);
 		viewer.loadSettingsFromURL();
 		
-		viewer.setDescription(`Sorvilier point cloud courtesy of <a target='_blank' href='https://www.sigeom.ch/'>sigeom sa</a>`);
+		// viewer.setDescription removed to avoid showing page description
 		
 		viewer.loadGUI(() => {
 			viewer.setLanguage('en');
 			$("#menu_scene").next().show();
 			$("#menu_tools").next().show();
+			// Force sidebar to be visible and keep it that way
 			viewer.toggleSidebar();
 		});
 
 
-		// wrap load code into an async function so that we can use "await"
-		async function load(){
+		// Default bulk-loading removed. Use the Open button or drag/drop to add pointclouds.
 
-			// specify point clouds that are to be loaded and callbacks to invoke 
-			let pointclouds = [
-				{
-					url: "../pointclouds/vol_total/cloud.js", 
-					callback: (pointcloud) => {
-						pointcloud.name = "sorvilier";
+		// Disabled automatic loading of default pointclouds. Use the Open button to load clouds.
+		// load();
 
-						let material = pointcloud.material;
-						material.size = 1;
-						material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
-					},
-				},{
-					url: "../pointclouds/lion_takanawa/cloud.js", 
-					callback: (pointcloud) => {
-						pointcloud.name = "lion 1";
-
-						let material = pointcloud.material;
-						material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
-
-						pointcloud.position.set(589927.44, 231479.04, 726.87);
-						pointcloud.scale.set(10, 10, 10);
-						pointcloud.rotation.set(0, 0, 0.8 * Math.PI);
-					},
-				},{
-					url: "../pointclouds/lion_takanawa/cloud.js", 
-					callback: (pointcloud) => {
-						pointcloud.name = "lion 2";
-
-						let material = pointcloud.material;
-
-						material.size = 1;
-						material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
-						material.activeAttributeName = "elevation";
-						material.heightMin = 720;
-						material.heightMax = 780;
-						
-						pointcloud.position.set(589997.44, 231479.04, 726.87);
-						pointcloud.scale.set(10, 10, 10);
-						pointcloud.rotation.set(0, 0, 0.8 * Math.PI);
-					},
-				},{
-					url: "../pointclouds/lion_takanawa/cloud.js", 
-					callback: (pointcloud) => {
-						pointcloud.name = "lion 3";
-
-						let material = pointcloud.material;
-						material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
-
-						material.color = new THREE.Color().setRGB(0.4, 0.6, 0.7);
-						
-						pointcloud.position.set(589927.44 -70, 231479.04, 726.87);
-						pointcloud.scale.set(10, 10, 10);
-						pointcloud.rotation.set(0, 0, 0.8 * Math.PI);
-					},
-				},{
-					url: "http://5.9.65.151/mschuetz/potree/resources/pointclouds/archpro/heidentor/cloud.js", 
-					callback: (pointcloud) => {
-						pointcloud.name = "Heidentor";
-						
-						pointcloud.position.set(589817.920, 231358.010, 744.865);
-						pointcloud.scale.set(6, 6, 6);
-						pointcloud.rotation.z = -1.9;
-					},
-				}
-			];
-
-			// start loading all point clouds asynchronously, get a promise for each one that resolves when it's loaded
-			let promises = pointclouds.map(p => Potree.loadPointCloud(p.url));
-			
-			// now iterate over all promises in order
-			for(let i = 0; i < promises.length; i++){
-
-				// wait until this point cloud is loaded before processing the next one
-				let pointcloud = (await promises[i]).pointcloud;
-
-				pointclouds[i].callback(pointcloud);
-				viewer.scene.addPointCloud(pointcloud);
+		// Copy specific navigation view buttons (left/right/front/back/top/bottom)
+		// into the top toolbar so they are immediately accessible.
+		function addViewButtonsToTopToolbar(){
+			const names = ['left.svg','right.svg','front.svg','back.svg','top.svg','bottom.svg'];
+			const nav = document.getElementById('navigation');
+			const toolbar = document.getElementById('top_toolbar_inner');
+			if(!nav || !toolbar) return false;
+			for(const img of Array.from(nav.querySelectorAll('img'))){
+				const src = img.getAttribute('src') || '';
+				const match = names.find(n => src.endsWith(n));
+				if(!match) continue;
+				// avoid adding duplicates
+				if(toolbar.querySelector(`img[data-nav-copy='${match}']`)) continue;
+				const clone = img.cloneNode(true);
+				clone.setAttribute('data-nav-copy', match);
+				clone.classList.add('cursor-pointer');
+				// wire click on clone to trigger the original button's click
+				clone.addEventListener('click', function(e){
+					e.preventDefault();
+					const original = nav.querySelector(`img[src$='${match}']`);
+					if(original) original.click();
+				});
+				toolbar.appendChild(clone);
 			}
-
-			
-			viewer.scene.view.setView(
-				[589974.341, 231698.397, 986.146],
-				[589851.587, 231428.213, 715.634],
-			);
+			return true;
 		}
 
-		load();
+		// Try to add buttons immediately; if navigation isn't populated yet, poll briefly.
+		(function tryAddButtons(retries = 10){
+			if(addViewButtonsToTopToolbar()) return;
+			if(retries <= 0) return;
+			setTimeout(() => tryAddButtons(retries - 1), 300);
+		})();
+
+		// Helper: assign a name to a point cloud and print debug info
+		function assignPointCloudName(pc, u) {
+			console.log('--- PointCloud Name Derivation ---');
+			console.log('Input URL:', u);
+			let name = u;
+			try {
+				const p = new URL(u);
+				console.log('Parsed URL:', p);
+				let path = p.pathname;
+				console.log('Pathname:', path);
+				// Remove leading slash for Windows drive letters
+				path = path.replace(/^\/(?=[A-Za-z]:)/, '');
+				const parts = path.split('/');
+				console.log('Path parts:', parts);
+				name = parts[parts.length-2] || parts[parts.length-1] || name;
+				console.log('Derived name from path parts:', name);
+			} catch(err) {
+				console.log('URL parse failed, fallback to string split:', err);
+				const parts = u.replace(/\\/g, '/').split('/');
+				console.log('Fallback parts:', parts);
+				name = parts[parts.length-2] || parts[parts.length-1] || name;
+				console.log('Derived name from fallback parts:', name);
+			}
+			if (!name) {
+				name = 'PointCloud';
+				console.log('Name was empty, using default:', name);
+			}
+			pc.name = name;
+			console.log('Final assigned name:', pc.name);
+			console.log('-------------------------------');
+		}
+
+		// Electron: open pointcloud via native dialog (preload exposes electronAPI.openPointcloud)
+		const openBtn = document.getElementById('openPointcloudBtn');
+		if(openBtn){
+			openBtn.addEventListener('click', async () => {
+				if(!window.electronAPI) return alert('Electron API unavailable');
+				const selected = await window.electronAPI.openPointcloud();
+				if(!selected) return;
+
+				let url = selected;
+				if(!/^https?:\/\//.test(url) && !url.startsWith('file://')){
+					url = url.replace(/\\/g, '/');
+					url = 'file://' + url;
+				}
+
+				// If the user picked a LAS/LAZ/COPC file, trigger conversion via main process
+				if(/\.(las|laz|copc)(\?|$)/i.test(url)){
+					console.log('LAS/LAZ/COPC picked — requesting conversion:', url);
+
+					// subscribe to progress (keeps existing behavior)
+					window.electronAPI.onConvertProgress((data) => {
+						console.log('[convert-progress]', data.type, data.text);
+					});
+
+					// helper: attempt to load a potree entry (direct URL, metadata.json, cloud.js)
+					async function tryLoadPotree(resultUrl){
+						const candidates = [resultUrl];
+
+						// if resultUrl is a file:// directory (no extension), add metadata.json/cloud.js
+						try{
+							const parsed = new URL(resultUrl);
+							if(parsed.protocol === 'file:'){
+								const pathname = parsed.pathname;
+								const last = pathname.split('/').pop();
+								if(!/\.[a-z0-9]+$/i.test(last)){
+									candidates.push(resultUrl.replace(/\/?$/, '/metadata.json'));
+									candidates.push(resultUrl.replace(/\/?$/, '/cloud.js'));
+								}
+							}
+						}catch(e){
+							// ignore
+						}
+
+						for(const u of candidates){
+							try{
+								const e = await Potree.loadPointCloud(u);
+								const pc = e.pointcloud;
+								assignPointCloudName(pc, u);
+
+								// rgba detection and material setup
+								const hasRGBA = pc.getAttributes().attributes.find(a => a.name === 'rgba') !== undefined;
+								if(hasRGBA){
+									pc.material.activeAttributeName = 'rgba';
+								}else{
+									pc.material.activeAttributeName = 'color';
+								}
+
+								pc.material.size = 1;
+								pc.material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+
+								viewer.scene.addPointCloud(pc);
+								viewer.zoomTo(pc);
+
+								return pc;
+							}catch(loadErr){
+								console.warn('load attempt failed for', u, loadErr);
+								// try next candidate
+							}
+						}
+
+						throw new Error('Failed to load converted pointcloud from any candidate URL');
+					}
+
+					try{
+						const result = await window.electronAPI.convertPointcloud({ inputs: [url], version: '2.0' });
+						console.log('conversion finished, result:', result);
+
+						try{
+							await tryLoadPotree(result);
+							console.log('Converted pointcloud loaded');
+						}catch(loadErr){
+							console.error('Failed to auto-load converted result:', loadErr);
+							alert('Conversion finished but auto-load failed. You can open the converted folder manually.');
+						}
+					}catch(err){
+						console.error('conversion failed', err);
+						alert('Conversion failed: ' + String(err));
+					}
+
+					return;
+				}
+
+				// otherwise attempt to load directly (cloud.js, ept.json, file:// or http(s))
+				try{
+					const e = await Potree.loadPointCloud(url);
+					const pc = e.pointcloud;
+					assignPointCloudName(pc, url);
+					viewer.scene.addPointCloud(pc);
+				}catch(err){
+					console.error('failed to load pointcloud', err);
+					alert('Failed to load pointcloud');
+				}
+			});
+		}
+	</script>
+
+	<!-- Drag-to-resize script for height profile -->
+	<script>
+	(function(){
+		const profile = document.getElementById('height_profile_container');
+		const titlebar = document.getElementById('height_profile_titlebar');
+		const renderArea = document.getElementById('potree_render_area');
+		const closeBtn = document.getElementById('height_profile_close');
+		if(!profile || !titlebar || !renderArea) return;
+
+		let dragging = false;
+		let startY = 0;
+		let startHeight = 0;
+
+		const MIN_PX = 80; // minimum profile height in px
+		const MAX_PX = Math.max(120, window.innerHeight - 120);
+
+		function onStart(e){
+			e.preventDefault();
+			dragging = true;
+			startY = (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
+			startHeight = profile.getBoundingClientRect().height;
+			document.addEventListener('mousemove', onMove);
+			document.addEventListener('mouseup', onEnd);
+			document.addEventListener('touchmove', onMove, {passive:false});
+			document.addEventListener('touchend', onEnd);
+		}
+
+		function onMove(e){
+			if(!dragging) return;
+			e.preventDefault();
+			const y = (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
+			const delta = startY - y; // up increases height
+			let newHeight = startHeight + delta;
+			newHeight = Math.max(MIN_PX, Math.min(newHeight, MAX_PX));
+			profile.style.height = newHeight + 'px';
+			// update render area bottom so borders align
+			renderArea.style.bottom = newHeight + 'px';
+		}
+
+		function onEnd(){
+			dragging = false;
+			document.removeEventListener('mousemove', onMove);
+			document.removeEventListener('mouseup', onEnd);
+			document.removeEventListener('touchmove', onMove);
+			document.removeEventListener('touchend', onEnd);
+		}
+
+		titlebar.addEventListener('mousedown', onStart);
+		titlebar.addEventListener('touchstart', onStart, {passive:false});
+
+		if(closeBtn){
+			closeBtn.addEventListener('click', function(){
+				profile.style.display = 'none';
+				renderArea.style.bottom = '0px';
+			});
+		}
+	})();
 	</script>
 	
 	

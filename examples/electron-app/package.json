@@ -1,0 +1,12 @@
+{
+  "name": "potree-electron",
+  "version": "0.1.0",
+  "description": "Electron wrapper to run the Potree example (multiple_pointclouds.html)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^26.2.0"
+  }
+}

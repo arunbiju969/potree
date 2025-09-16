@@ -236,6 +236,9 @@ export class ProfileWindow extends EventDispatcher {
 
 		this.viewer = viewer;
 		this.elRoot = $('#profile_window');
+		// Store original parent for restoration
+		this._originalProfileWindowParent = this.elRoot.parent();
+		this._profileWindowRestored = false;
 		this.renderArea = this.elRoot.find('#profileCanvasContainer');
 		this.svg = d3.select('svg#profileSVG');
 		this.mouseIsDown = false;
@@ -819,13 +822,64 @@ export class ProfileWindow extends EventDispatcher {
 	}
 
 	show () {
-		this.elRoot.fadeIn();
-		this.enabled = true;
+		   // DEBUG: Log state before showing
+		   console.log('[ProfileWindow.show] called');
+		   const container = $('#height_profile_container');
+		   if (container.length) {
+			   container.show();
+			   console.log('[ProfileWindow.show] #height_profile_container found and shown');
+		   } else {
+			   console.warn('[ProfileWindow.show] #height_profile_container NOT found');
+		   }
+		   const customPanel = $('#myProfilePanel');
+		   if (customPanel.length) {
+			   customPanel.show();
+			   console.log('[ProfileWindow.show] #myProfilePanel found and shown');
+		   } else {
+			   console.warn('[ProfileWindow.show] #myProfilePanel NOT found');
+		   }
+		   if (customPanel.length && !this._profileWindowRestored) {
+			   customPanel.append(this.elRoot);
+			   // Remove overlay/floating styles for embedded display
+			   this.elRoot.css({
+				   position: 'static',
+				   left: '',
+				   top: '',
+				   right: '',
+				   bottom: '',
+				   zIndex: ''
+			   });
+			   this._profileWindowRestored = true;
+			   console.log('[ProfileWindow.show] #profile_window appended to #myProfilePanel');
+		   }
+		   // DEBUG: Log visibility and DOM state
+		   console.log('[ProfileWindow.show] #profile_window display before:', this.elRoot.css('display'));
+		   this.elRoot.fadeIn();
+		   setTimeout(() => {
+			   console.log('[ProfileWindow.show] #profile_window display after:', this.elRoot.css('display'));
+			   console.log('[ProfileWindow.show] #profile_window parent:', this.elRoot.parent().attr('id'));
+			   console.log('[ProfileWindow.show] #profile_window offset:', this.elRoot.offset());
+			   console.log('[ProfileWindow.show] #profile_window size:', this.elRoot.width(), this.elRoot.height());
+		   }, 500);
+		   this.enabled = true;
 	}
 
 	hide () {
-		this.elRoot.fadeOut();
-		this.enabled = false;
+		   this.elRoot.fadeOut();
+		   this.enabled = false;
+		   // Restore #profile_window to original parent if needed
+		   if (this._profileWindowRestored && this._originalProfileWindowParent && this._originalProfileWindowParent.length) {
+			   this._originalProfileWindowParent.append(this.elRoot);
+			   this.elRoot.css({
+				   position: '',
+				   left: '',
+				   top: '',
+				   right: '',
+				   bottom: '',
+				   zIndex: ''
+			   });
+			   this._profileWindowRestored = false;
+		   }
 	}
 
 	updateScales () {

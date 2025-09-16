@@ -1,0 +1,94 @@
+<div
+  id="height_profile_container"
+  style="
+    position: absolute;
+    left: 400px;
+    right: 0px;
+    bottom: 0px;
+    height: 507.109px;
+    background: rgba(82, 15, 15, 0.6);
+    color: rgb(221, 221, 221);
+    border-width: 3px 2px 2px;
+    border-style: solid;
+    border-color: rgba(255, 0, 0, 0.95) rgba(255, 0, 0, 0.9)
+      rgba(255, 0, 0, 0.9);
+    border-image: initial;
+    box-sizing: border-box;
+    padding: 8px;
+    z-index: 60;
+  "
+>
+  <!-- titlebar: drag this to resize the profile window height -->
+  <div
+    id="height_profile_titlebar"
+    style="
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      cursor: ns-resize;
+      padding: 4px 2px;
+      user-select: none;
+    "
+  >
+    <strong>Height Profile</strong>
+    <!-- close button: hides the profile panel -->
+    <button
+      id="height_profile_close"
+      aria-label="Close height profile"
+      style="
+        background: transparent;
+        border: none;
+        color: #ddd;
+        font-size: 1.1em;
+        padding: 4px 8px;
+        cursor: pointer;
+      "
+    >
+      ✕
+    </button>
+  </div>
+  <!-- Potree profile window will be embedded here -->
+  <div
+    id="myProfilePanel"
+    style="border: 2px solid #00a6ff; box-sizing: border-box; position: relative; height: calc(100% - 46px); overflow: hidden;"
+  >
+    <div id="profile_window" style="position: relative; height: 100%;">
+      <div
+        class="pw_content"
+        style="
+          position: absolute;
+          top: 30px;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          width: 100%;
+          box-sizing: border-box;
+          border: 2px solid orange;
+          padding: 6px;
+        "
+      >
+        <div
+          id="profileCanvasContainer"
+          style="
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            /*background-color: #000000;*/
+            border: 2px solid #00ff00;
+            box-sizing: border-box;
+          "
+        >
+          <canvas
+            width="951"
+            height="464"
+            tabindex="2222"
+            style="display: block; width: 951px; height: 464px"
+          ></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

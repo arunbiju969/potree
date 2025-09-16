@@ -37,6 +37,90 @@ export class PropertiesPanel{
 		this.scene = scene;
 	}
 
+	// Persist/load per-pointcloud preferences (localStorage)
+	getPointCloudKey(pointcloud){
+		// Prefer a stable identifier created from the pointcloud geometry URL(s).
+		// pcoGeometry.url or pcoGeometry.octreeDir are usually stable across reloads.
+		try{
+			const pco = pointcloud.pcoGeometry;
+			if(pco){
+				if(pco.url) return `potree.pc.prefs.${pco.url}`;
+				if(pco.octreeDir) return `potree.pc.prefs.${pco.octreeDir}`;
+			}
+		}catch(e){}
+		// fallback to user-visible name, then runtime uuid
+		return `potree.pc.prefs.${pointcloud.name || pointcloud.uuid}`;
+	}
+
+	// Persist/load per-pointcloud preferences (localStorage)
+	savePointCloudPrefs(pointcloud, prefs){
+		try{
+			const key = this.getPointCloudKey(pointcloud);
+			localStorage.setItem(key, JSON.stringify(prefs));
+			console.debug('[PropertiesPanel] saved prefs for', key, prefs);
+		}catch(e){ console.warn('[PropertiesPanel] failed to save prefs', e); }
+	}
+
+	// Persist/load global default preferences (localStorage)
+	saveGlobalPointCloudPrefs(prefs){
+		try{
+			localStorage.setItem('potree.pc.globalPrefs', JSON.stringify(prefs));
+			console.debug('[PropertiesPanel] saved GLOBAL prefs', prefs);
+		}catch(e){ console.warn('[PropertiesPanel] failed to save GLOBAL prefs', e); }
+	}
+
+	loadGlobalPointCloudPrefs(){
+		try{
+			const raw = localStorage.getItem('potree.pc.globalPrefs');
+			if(!raw) return null;
+			const obj = JSON.parse(raw);
+			console.debug('[PropertiesPanel] loaded GLOBAL prefs', obj);
+			return obj;
+		}catch(e){ console.warn('[PropertiesPanel] failed to load GLOBAL prefs', e); return null; }
+	}
+
+	loadPointCloudPrefs(pointcloud){
+		try{
+			const key = this.getPointCloudKey(pointcloud);
+			const raw = localStorage.getItem(key);
+			if(!raw) return null;
+			const obj = JSON.parse(raw);
+			console.debug('[PropertiesPanel] loaded prefs for', key, obj);
+			return obj;
+		}catch(e){ console.warn('[PropertiesPanel] failed to load prefs', e); return null; }
+	}
+
+	applyPointCloudPrefs(pointcloud, prefs){
+		if(!prefs) return;
+		const material = pointcloud.material;
+		try{
+			if(typeof prefs.pointSize === 'number') material.size = prefs.pointSize;
+			if(typeof prefs.minPointSize === 'number') material.minSize = prefs.minPointSize;
+			if(typeof prefs.pointSizeType !== 'undefined') material.pointSizeType = prefs.pointSizeType;
+			if(typeof prefs.shape !== 'undefined') material.shape = prefs.shape;
+			if(typeof prefs.opacity === 'number') material.opacity = prefs.opacity;
+			if(typeof prefs.backfaceCulling === 'boolean') material.backfaceCulling = prefs.backfaceCulling;
+			if(typeof prefs.activeAttributeName === 'string') material.activeAttributeName = prefs.activeAttributeName;
+			if(typeof prefs.rgbGamma === 'number') material.rgbGamma = prefs.rgbGamma;
+			if(typeof prefs.colorHex === 'string'){
+				try{ material.color.set(prefs.colorHex); }catch(e){}
+			}
+			// Notify listeners so UI widgets update to reflect new values
+			if(material.dispatchEvent){
+				// generic material property change
+				material.dispatchEvent({type: 'material_property_changed'});
+				// more specific events used by various controls
+				material.dispatchEvent({type: 'point_size_changed'});
+				material.dispatchEvent({type: 'point_shape_changed'});
+				material.dispatchEvent({type: 'backface_changed'});
+				material.dispatchEvent({type: 'opacity_changed'});
+				material.dispatchEvent({type: 'point_color_type_changed'});
+				material.dispatchEvent({type: 'active_attribute_changed'});
+				material.dispatchEvent({type: 'color_changed'});
+			}
+		}catch(e){ console.warn('[PropertiesPanel] failed to apply prefs', e); }
+	}
+
 	set(object){
 		if(this.object === object){
 			return;
@@ -252,6 +336,18 @@ export class PropertiesPanel{
 		panel.i18n();
 		this.container.append(panel);
 
+		// Load and apply any saved prefs for this pointcloud
+		const saved = this.loadPointCloudPrefs(pointcloud);
+		if(saved){
+			this.applyPointCloudPrefs(pointcloud, saved);
+		} else {
+			// no per-pointcloud prefs, try global defaults
+			const global = this.loadGlobalPointCloudPrefs();
+			if(global){
+				this.applyPointCloudPrefs(pointcloud, global);
+			}
+		}
+
 		{ // POINT SIZE
 			let sldPointSize = panel.find(`#sldPointSize`);
 			let lblPointSize = panel.find(`#lblPointSize`);
@@ -271,6 +367,88 @@ export class PropertiesPanel{
 			this.addVolatileListener(material, "point_size_changed", update);
 			
 			update();
+		}
+
+		// Add Save button for per-pointcloud preferences
+		{
+			const footer = $(`
+				<div style="border-top:1px solid rgba(255,255,255,0.06); padding-top:8px; margin-top:8px; display:flex; justify-content:flex-end; width:100%; gap:8px;">
+					<button id="btnResetGlobalPcPrefs" class="ui-button ui-widget ui-corner-all" style="background:#b91c1c; color:white; padding:6px 10px; border:none; border-radius:6px; cursor:pointer;">Reset to global</button>
+					<button id="btnSaveGlobalPcPrefs" class="ui-button ui-widget ui-corner-all" style="background:#065f46; color:white; padding:6px 10px; border:none; border-radius:6px; cursor:pointer;">Save global</button>
+					<button id="btnSavePcPrefs" class="ui-button ui-widget ui-corner-all" style="background:#2563eb; color:white; padding:6px 10px; border:none; border-radius:6px; cursor:pointer;">Save</button>
+				</div>
+			`);
+
+			panel.append(footer);
+
+			footer.find('#btnSavePcPrefs').click(() => {
+				// collect current prefs
+				const material = pointcloud.material;
+				const prefs = {
+					pointSize: material.size,
+					minPointSize: material.minSize,
+					pointSizeType: material.pointSizeType,
+					shape: material.shape,
+					opacity: material.opacity,
+					backfaceCulling: material.backfaceCulling,
+					activeAttributeName: material.activeAttributeName,
+					rgbGamma: material.rgbGamma,
+					colorHex: `#${material.color.getHexString()}`
+				};
+				this.savePointCloudPrefs(pointcloud, prefs);
+				console.debug('[PropertiesPanel] Save button clicked, key=', this.getPointCloudKey(pointcloud), 'prefs=', prefs);
+				// small visual feedback
+				const btn = footer.find('#btnSavePcPrefs');
+				const old = btn.text();
+				btn.text('Saved');
+				setTimeout(() => btn.text(old), 1200);
+			});
+			// Save global defaults button
+			footer.find('#btnSaveGlobalPcPrefs').click(() => {
+				const material = pointcloud.material;
+				const prefs = {
+					pointSize: material.size,
+					minPointSize: material.minSize,
+					pointSizeType: material.pointSizeType,
+					shape: material.shape,
+					opacity: material.opacity,
+					backfaceCulling: material.backfaceCulling,
+					activeAttributeName: material.activeAttributeName,
+					rgbGamma: material.rgbGamma,
+					colorHex: `#${material.color.getHexString()}`
+				};
+				this.saveGlobalPointCloudPrefs(prefs);
+				console.debug('[PropertiesPanel] Save GLOBAL clicked, prefs=', prefs);
+				const btn = footer.find('#btnSaveGlobalPcPrefs');
+				const old = btn.text();
+				btn.text('Saved');
+				setTimeout(() => btn.text(old), 1200);
+			});
+
+			// Reset the panel/material to the global defaults (if present)
+			footer.find('#btnResetGlobalPcPrefs').click(() => {
+				const global = this.loadGlobalPointCloudPrefs();
+				if(!global){
+					console.debug('[PropertiesPanel] No GLOBAL prefs found to reset to.');
+					const btn = footer.find('#btnResetGlobalPcPrefs');
+					const old = btn.text();
+					btn.text('No global');
+					setTimeout(() => btn.text(old), 1200);
+					return;
+				}
+
+				// Apply global prefs to the pointcloud material and update UI via events
+				try{
+					this.applyPointCloudPrefs(pointcloud, global);
+					console.debug('[PropertiesPanel] Applied GLOBAL prefs to pointcloud', pointcloud && pointcloud.name, global);
+					const btn = footer.find('#btnResetGlobalPcPrefs');
+					const old = btn.text();
+					btn.text('Applied');
+					setTimeout(() => btn.text(old), 1200);
+				}catch(e){
+					console.warn('[PropertiesPanel] Failed to apply GLOBAL prefs', e);
+				}
+			});
 		}
 
 		{ // MINIMUM POINT SIZE
