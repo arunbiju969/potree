@@ -650,6 +650,8 @@ vec3 getColor(){
 		color = getStemcls();
 	#elif defined color_type_itc
 		color = getStemcls();
+	#elif defined color_type_treefilter
+		color = getStemcls();
 	#else 
 		color = getExtra();
 	#endif
