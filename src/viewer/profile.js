@@ -252,6 +252,7 @@ export class ProfileWindow extends EventDispatcher {
 		this.scale = new THREE.Vector3(1, 1, 1);
 
 		this.autoFitEnabled = true; // completely disable/enable
+		this._profilePending = false; // whether queries are still running
 		this.autoFit = false; // internal
 
 		let cwIcon = `${exports.resourcePath}/icons/arrow_cw.svg`;
@@ -288,6 +289,30 @@ export class ProfileWindow extends EventDispatcher {
 		this.pRenderer = new Renderer(this.renderer);
 
 		this.elRoot.i18n();
+	}
+
+	setProfilePending(pending) {
+		this._profilePending = !!pending;
+		this.updateLoadedSummary();
+	}
+
+	updateLoadedSummary() {
+		// Compute loaded points across all accumulated segments
+		let loaded = 0;
+		for (let [key, value] of this.pointclouds.entries()) {
+			loaded += value.points.reduce((a, i) => a + i.numPoints, 0);
+		}
+		$('#profile_num_points').html(Utils.addCommas(loaded));
+		const summaryEl = this.elRoot.find('#profile_points_summary');
+		if (summaryEl.length) {
+			if (this._profilePending) {
+				// Show loaded / … while requests are pending
+				summaryEl.text(`${Utils.addCommas(loaded)} / …`);
+			} else {
+				// When finished, total equals loaded (complete)
+				summaryEl.text(`${Utils.addCommas(loaded)} / ${Utils.addCommas(loaded)}`);
+			}
+		}
 	}
 
 	initListeners () {
@@ -547,12 +572,28 @@ export class ProfileWindow extends EventDispatcher {
 
 		$('#potree_download_las_icon').click(() => {
 
-			let points = getProfilePoints(true);
+			const doExport = () => {
+				let points = getProfilePoints(true);
+				let buffer = LASExporter.toLAS(points);
+				let blob = new Blob([buffer], {type: "application/octet-binary"});
+				$('#potree_download_profile_link').attr('href', URL.createObjectURL(blob));
+			};
 
-			let buffer = LASExporter.toLAS(points);
-
-			let blob = new Blob([buffer], {type: "application/octet-binary"});
-			$('#potree_download_profile_link').attr('href', URL.createObjectURL(blob));
+			// If profile is still loading, wait for completion
+			if (this._profilePending) {
+				const originalHandler = this.setProfilePending;
+				this.setProfilePending = (pending) => {
+					originalHandler.call(this, pending);
+					if (!pending) {
+						// Profile finished, now export
+						this.setProfilePending = originalHandler;
+						setTimeout(doExport, 100);
+					}
+				};
+			} else {
+				// Profile already complete, export immediately
+				doExport();
+			}
 		});
 	}
 
@@ -786,11 +827,7 @@ export class ProfileWindow extends EventDispatcher {
 
 		this.render();
 
-		let numPoints = 0;
-		for (let [key, value] of this.pointclouds.entries()) {
-			numPoints += value.points.reduce( (a, i) => a + i.numPoints, 0);
-		}
-		$(`#profile_num_points`).html(Utils.addCommas(numPoints));
+		this.updateLoadedSummary();
 
 	}
 
@@ -992,7 +1029,7 @@ export class ProfileWindowController {
 		this.profileWindow = viewer.profileWindow;
 		this.profile = null;
 		this.numPoints = 0;
-		this.threshold = 60 * 1000;
+		this.threshold = Infinity;  // Disable early cancel to get all points
 		this.rotateAmount = 10;
 
 		this.scheduledRecomputeTime = null;
@@ -1161,6 +1198,14 @@ export class ProfileWindowController {
 		this.scheduledRecomputeTime = null;
 
 		this.reset();
+		this.profileWindow.setProfilePending(true);
+
+		let pending = 0;
+		const tryDone = () => {
+			if (pending === 0) {
+				this.profileWindow.setProfilePending(false);
+			}
+		};
 
 		for (let pointcloud of this.viewer.scene.pointclouds.filter(p => p.visible)) {
 			let request = pointcloud.getPointsInProfile(this.profile, null, {
@@ -1171,23 +1216,25 @@ export class ProfileWindowController {
 
 					this.progressHandler(pointcloud, event.points);
 
-					if (this.numPoints > this.threshold) {
-						this.finishLevelThenCancel();
-					}
+					// Let the request run to completion for full point coverage
 				},
 				'onFinish': (event) => {
-					if (!this.enabled) {
-
-					}
+					pending = Math.max(0, pending - 1);
+					tryDone();
 				},
 				'onCancel': () => {
-					if (!this.enabled) {
-
-					}
+					pending = Math.max(0, pending - 1);
+					tryDone();
 				}
 			});
 
 			this.requests.push(request);
+			pending++;
+		}
+
+		// If no requests were scheduled (e.g., no visible pointclouds), clear pending immediately
+		if (pending === 0) {
+			this.profileWindow.setProfilePending(false);
 		}
 	}
 };

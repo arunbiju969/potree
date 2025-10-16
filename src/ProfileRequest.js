@@ -114,7 +114,7 @@ export class ProfileRequest {
 
 		let start = performance.now();
 
-		let maxNodesPerUpdate = 1;
+		let maxNodesPerUpdate = 32;  // Increased for faster, more deterministic completion
 		let intersectedNodes = [];
 
 		for (let i = 0; i < Math.min(maxNodesPerUpdate, this.priorityQueue.size()); i++) {
