@@ -236,6 +236,9 @@ export class ProfileWindow extends EventDispatcher {
 
 		this.viewer = viewer;
 		this.elRoot = $('#profile_window');
+		// Store original parent for restoration
+		this._originalProfileWindowParent = this.elRoot.parent();
+		this._profileWindowRestored = false;
 		this.renderArea = this.elRoot.find('#profileCanvasContainer');
 		this.svg = d3.select('svg#profileSVG');
 		this.mouseIsDown = false;
@@ -249,6 +252,7 @@ export class ProfileWindow extends EventDispatcher {
 		this.scale = new THREE.Vector3(1, 1, 1);
 
 		this.autoFitEnabled = true; // completely disable/enable
+		this._profilePending = false; // whether queries are still running
 		this.autoFit = false; // internal
 
 		let cwIcon = `${exports.resourcePath}/icons/arrow_cw.svg`;
@@ -285,6 +289,30 @@ export class ProfileWindow extends EventDispatcher {
 		this.pRenderer = new Renderer(this.renderer);
 
 		this.elRoot.i18n();
+	}
+
+	setProfilePending(pending) {
+		this._profilePending = !!pending;
+		this.updateLoadedSummary();
+	}
+
+	updateLoadedSummary() {
+		// Compute loaded points across all accumulated segments
+		let loaded = 0;
+		for (let [key, value] of this.pointclouds.entries()) {
+			loaded += value.points.reduce((a, i) => a + i.numPoints, 0);
+		}
+		$('#profile_num_points').html(Utils.addCommas(loaded));
+		const summaryEl = this.elRoot.find('#profile_points_summary');
+		if (summaryEl.length) {
+			if (this._profilePending) {
+				// Show loaded / … while requests are pending
+				summaryEl.text(`${Utils.addCommas(loaded)} / …`);
+			} else {
+				// When finished, total equals loaded (complete)
+				summaryEl.text(`${Utils.addCommas(loaded)} / ${Utils.addCommas(loaded)}`);
+			}
+		}
 	}
 
 	initListeners () {
@@ -544,12 +572,28 @@ export class ProfileWindow extends EventDispatcher {
 
 		$('#potree_download_las_icon').click(() => {
 
-			let points = getProfilePoints(true);
+			const doExport = () => {
+				let points = getProfilePoints(true);
+				let buffer = LASExporter.toLAS(points);
+				let blob = new Blob([buffer], {type: "application/octet-binary"});
+				$('#potree_download_profile_link').attr('href', URL.createObjectURL(blob));
+			};
 
-			let buffer = LASExporter.toLAS(points);
-
-			let blob = new Blob([buffer], {type: "application/octet-binary"});
-			$('#potree_download_profile_link').attr('href', URL.createObjectURL(blob));
+			// If profile is still loading, wait for completion
+			if (this._profilePending) {
+				const originalHandler = this.setProfilePending;
+				this.setProfilePending = (pending) => {
+					originalHandler.call(this, pending);
+					if (!pending) {
+						// Profile finished, now export
+						this.setProfilePending = originalHandler;
+						setTimeout(doExport, 100);
+					}
+				};
+			} else {
+				// Profile already complete, export immediately
+				doExport();
+			}
 		});
 	}
 
@@ -783,11 +827,7 @@ export class ProfileWindow extends EventDispatcher {
 
 		this.render();
 
-		let numPoints = 0;
-		for (let [key, value] of this.pointclouds.entries()) {
-			numPoints += value.points.reduce( (a, i) => a + i.numPoints, 0);
-		}
-		$(`#profile_num_points`).html(Utils.addCommas(numPoints));
+		this.updateLoadedSummary();
 
 	}
 
@@ -819,13 +859,64 @@ export class ProfileWindow extends EventDispatcher {
 	}
 
 	show () {
-		this.elRoot.fadeIn();
-		this.enabled = true;
+		   // DEBUG: Log state before showing
+		   console.log('[ProfileWindow.show] called');
+		   const container = $('#height_profile_container');
+		   if (container.length) {
+			   container.show();
+			   console.log('[ProfileWindow.show] #height_profile_container found and shown');
+		   } else {
+			   console.warn('[ProfileWindow.show] #height_profile_container NOT found');
+		   }
+		   const customPanel = $('#myProfilePanel');
+		   if (customPanel.length) {
+			   customPanel.show();
+			   console.log('[ProfileWindow.show] #myProfilePanel found and shown');
+		   } else {
+			   console.warn('[ProfileWindow.show] #myProfilePanel NOT found');
+		   }
+		   if (customPanel.length && !this._profileWindowRestored) {
+			   customPanel.append(this.elRoot);
+			   // Remove overlay/floating styles for embedded display
+			   this.elRoot.css({
+				   position: 'static',
+				   left: '',
+				   top: '',
+				   right: '',
+				   bottom: '',
+				   zIndex: ''
+			   });
+			   this._profileWindowRestored = true;
+			   console.log('[ProfileWindow.show] #profile_window appended to #myProfilePanel');
+		   }
+		   // DEBUG: Log visibility and DOM state
+		   console.log('[ProfileWindow.show] #profile_window display before:', this.elRoot.css('display'));
+		   this.elRoot.fadeIn();
+		   setTimeout(() => {
+			   console.log('[ProfileWindow.show] #profile_window display after:', this.elRoot.css('display'));
+			   console.log('[ProfileWindow.show] #profile_window parent:', this.elRoot.parent().attr('id'));
+			   console.log('[ProfileWindow.show] #profile_window offset:', this.elRoot.offset());
+			   console.log('[ProfileWindow.show] #profile_window size:', this.elRoot.width(), this.elRoot.height());
+		   }, 500);
+		   this.enabled = true;
 	}
 
 	hide () {
-		this.elRoot.fadeOut();
-		this.enabled = false;
+		   this.elRoot.fadeOut();
+		   this.enabled = false;
+		   // Restore #profile_window to original parent if needed
+		   if (this._profileWindowRestored && this._originalProfileWindowParent && this._originalProfileWindowParent.length) {
+			   this._originalProfileWindowParent.append(this.elRoot);
+			   this.elRoot.css({
+				   position: '',
+				   left: '',
+				   top: '',
+				   right: '',
+				   bottom: '',
+				   zIndex: ''
+			   });
+			   this._profileWindowRestored = false;
+		   }
 	}
 
 	updateScales () {
@@ -938,7 +1029,7 @@ export class ProfileWindowController {
 		this.profileWindow = viewer.profileWindow;
 		this.profile = null;
 		this.numPoints = 0;
-		this.threshold = 60 * 1000;
+		this.threshold = Infinity;  // Disable early cancel to get all points
 		this.rotateAmount = 10;
 
 		this.scheduledRecomputeTime = null;
@@ -1107,6 +1198,14 @@ export class ProfileWindowController {
 		this.scheduledRecomputeTime = null;
 
 		this.reset();
+		this.profileWindow.setProfilePending(true);
+
+		let pending = 0;
+		const tryDone = () => {
+			if (pending === 0) {
+				this.profileWindow.setProfilePending(false);
+			}
+		};
 
 		for (let pointcloud of this.viewer.scene.pointclouds.filter(p => p.visible)) {
 			let request = pointcloud.getPointsInProfile(this.profile, null, {
@@ -1117,23 +1216,25 @@ export class ProfileWindowController {
 
 					this.progressHandler(pointcloud, event.points);
 
-					if (this.numPoints > this.threshold) {
-						this.finishLevelThenCancel();
-					}
+					// Let the request run to completion for full point coverage
 				},
 				'onFinish': (event) => {
-					if (!this.enabled) {
-
-					}
+					pending = Math.max(0, pending - 1);
+					tryDone();
 				},
 				'onCancel': () => {
-					if (!this.enabled) {
-
-					}
+					pending = Math.max(0, pending - 1);
+					tryDone();
 				}
 			});
 
 			this.requests.push(request);
+			pending++;
+		}
+
+		// If no requests were scheduled (e.g., no visible pointclouds), clear pending immediately
+		if (pending === 0) {
+			this.profileWindow.setProfilePending(false);
 		}
 	}
 };

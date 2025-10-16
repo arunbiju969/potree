@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Potree Full Point Cloud Export Example</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .export-button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        .export-button:hover { background: #45a049; }
+        .status { margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Potree Full Point Cloud Export</h1>
+
+    <div id="potree_root"></div>
+
+    <div class="controls">
+        <button id="exportBtn" class="export-button">Export Full Point Cloud to LAS</button>
+        <div id="status" class="status">Ready to export</div>
+    </div>
+
+    <script type="module">
+        import { FullPointCloudExporter } from './src/exporter/FullPointCloudExporter.js';
+
+        // Initialize Potree viewer (you would normally have this set up)
+        // This is a simplified example - in practice you'd have a full Potree viewer
+
+        document.getElementById('exportBtn').addEventListener('click', async () => {
+            const status = document.getElementById('status');
+
+            try {
+                status.textContent = 'Starting export...';
+
+                // Get the first loaded point cloud (in a real app, you'd select which one)
+                const pointclouds = viewer.scene.pointclouds;
+                if (pointclouds.length === 0) {
+                    throw new Error('No point clouds loaded');
+                }
+
+                const pointcloud = pointclouds[0];
+                status.textContent = `Exporting ${pointcloud.name || 'pointcloud'}...`;
+
+                // Export the full point cloud
+                await FullPointCloudExporter.downloadLAS(pointcloud);
+
+                status.textContent = 'Export completed successfully!';
+
+            } catch (error) {
+                status.textContent = `Export failed: ${error.message}`;
+                console.error('Export error:', error);
+            }
+        });
+    </script>
+</body>
+</html>

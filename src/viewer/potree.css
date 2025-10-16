@@ -54,7 +54,7 @@
 #potree_sidebar_container{
 	position:	absolute;
 	z-index:	0;
-	width:		350px;
+	width:		500px;
 	height:		100%;
 	overflow-y:	scroll;
 	font-size:	85%;
@@ -108,6 +108,17 @@
 	background-color: red;
 }
 
+#potree_map_toggle{
+	float: none;
+	margin: 0;
+	background: none;
+	width: 36px;    /* explicit icon size */
+	height: 36px;
+	z-index: 20020; /* sit above toolbar */
+	cursor: pointer;
+	display: block;
+}
+
 #potree_description{
 	position: absolute; 
 	top: 10px; 
@@ -135,9 +146,10 @@
 	position: absolute;
 	left: 4px;
 	top: 4px; 
-	width: 10px; 
-	height: 10px; 
-	z-index: 10000;
+	width: 40px; 
+	height: 40px; 
+	/* keep the quick buttons above most UI layers */
+	z-index: 20010;
 	float: left;
 }
 
@@ -174,6 +186,12 @@
 	z-index: 	1;
 	-webkit-transition: left .35s;
 	transition: left .35s;
+}
+
+
+/* Make sure the quick-button image is clickable and sits above overlays */
+#potree_quick_buttons, #potree_quick_buttons * {
+	pointer-events: auto;
 }
 
 .potree-panel {
@@ -380,7 +398,6 @@ body{
 #scene_object_properties{
 	margin:		0px;
 }
-
 
 
 
@@ -670,7 +687,35 @@ body{
 
 .jstree-anchor{
 	width: 100% !important;
+	display: flex;
+	align-items: center;
+	min-width: 0;
 }
+
+/* Truncate long point cloud names and keep remove button visible */
+.jstree-anchor b {
+	display: inline-block;
+	max-width: 160px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	vertical-align: middle;
+}
+.jstree-anchor .pc-remove {
+	flex: 0 0 auto;
+	margin-left: 8px;
+	color: #f87171;
+	font-weight: bold;
+	cursor: pointer;
+	background: none;
+	border: none;
+	font-size: 1.1em;
+	line-height: 1;
+}
+.jstree-anchor i.jstree-themeicon-custom {
+	margin-right: 6px;
+}
+
 
 .ui-state-default{
 	background: #a6a9aa !important;
@@ -770,7 +815,12 @@ body{
 
 #potree_sidebar_container{
 	scrollbar-color: var(--color-1) var(--bg-color);
-	scrollbar-width: thin;
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+}
+
+#potree_sidebar_container::-webkit-scrollbar {
+	display: none;
 }
 
 

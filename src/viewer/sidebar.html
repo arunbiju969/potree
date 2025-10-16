@@ -1,278 +1,713 @@
 
-<div id="sidebar_root" class="">
-	<div id="sidebar_header">
-		<span id="potree_branding" class="potree_sidebar_brand">
-			<a href="http://potree.org" target="_blank">potree.org</a> 
-			<span style="margin: 0px 3px; color: #9AA1A4"> - </span> 
-			<a href="https://github.com/potree/potree" target="_blank">github</a>
-			<span style="margin: 0px 3px; color: #9AA1A4"> - </span> 
-			<a href="https://twitter.com/m_schuetz" target="_blank">twitter</a>
-			<span style="flex-grow: 1"></span>
-			<span id="potree_version_number" style="color: #9AA1A4; font-size: 80%; font-weight: 100"></span>
-		</span>
-		<div id="potree_languages" style="font-family:arial;"></div>
-	</div>
-	<div> 
+<div id="sidebar_root" class="text-white h-full">
 
-	<div id="potree_menu" class="accordion">
+	<div class="flex-1 flex flex-col h-full"> 
 
-		
-		<!-- APPEARANCE -->
-		<h3 id="menu_appearance"><span data-i18n="tb.rendering_opt"></span></h3>
-		<div>
-			<ul class="pv-menu-list">
-				<li><span data-i18n="appearance.nb_max_pts"></span>: <span id="lblPointBudget"></span> <div id="sldPointBudget"></div></li>
-				<li><span data-i18n="appearance.field_view"></span>: <span id="lblFOV"></span><div id="sldFOV"></div></li>
+		<!-- TOP 50% - SCENE SECTION -->
+		<div class="h-1/2 p-4 border-b border-gray-600">
+			<div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-full flex flex-col">
+				<div id="menu_scene" class="bg-blue-600 px-4 py-3 rounded-t-lg">
+					<h3 class="text-white font-medium">
+						<span data-i18n="tb.scene_opt">Scene</span>
+					</h3>
+				</div>
+				<div class="p-4 flex-1 overflow-hidden">
+					<div class="space-y-4">
+						<div id="scene_export" class="mb-4">
+							<label class="block text-sm font-medium text-gray-200 mb-2">Export</label>
+							<button id="export_dropdown_button" data-dropdown-toggle="export_dropdown_menu" class="w-full bg-gray-700 hover:bg-gray-600 text-white text-sm px-3 py-2 rounded-md border border-gray-600 text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-blue-500" type="button">
+								<span>Select Export Format</span>
+								<svg class="w-2.5 h-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+									<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
+								</svg>
+							</button>
+							<!-- Dropdown menu -->
+							<div id="export_dropdown_menu" class="z-10 hidden bg-gray-700 divide-y divide-gray-600 rounded-lg shadow w-full">
+								<ul class="py-2 text-sm text-gray-200" aria-labelledby="export_dropdown_button">
+									<li>
+										<a href="#" id="export_geojson" download="measure.json" class="flex items-center px-4 py-2 hover:bg-gray-600 hover:text-white">
+											<span class="w-8 text-xs text-blue-400 font-mono mr-2">JSON</span>
+											<span>Export as GeoJSON</span>
+										</a>
+									</li>
+									<li>
+										<a href="#" id="export_dxf" download="measure.dxf" class="flex items-center px-4 py-2 hover:bg-gray-600 hover:text-white">
+											<span class="w-8 text-xs text-green-400 font-mono mr-2">DXF</span>
+											<span>Export as DXF</span>
+										</a>
+									</li>
+									<li>
+										<a href="#" id="export_potree" download="potree.json5" class="flex items-center px-4 py-2 hover:bg-gray-600 hover:text-white">
+											<span class="w-8 text-xs text-purple-400 font-mono mr-2">TREE</span>
+											<span>Export as Potree</span>
+										</a>
+									</li>
+								</ul>
+							</div>
+						</div>
 
-				<div class="divider"><span>Eye-Dome-Lighting</span></div>
+						<div class="border-t border-gray-600 pt-4">
+							<h4 class="text-sm font-medium text-gray-200 mb-3">Objects</h4>
+							<div id="scene_objects"></div>
+						</div>
 
-				<li><label><input type="checkbox" id="chkEDLEnabled"/><span data-i18n="appearance.edl_enable"></span></label></li>
-				<li><span data-i18n="appearance.edl_radius"></span>: <span id="lblEDLRadius"></span><div id="sldEDLRadius"></div></li>
-				<li><span data-i18n="appearance.edl_strength"></span>: <span id="lblEDLStrength"></span><div id="sldEDLStrength"></div></li>
-				<li><span data-i18n="appearance.edl_opacity"></span>: <span id="lblEDLOpacity"></span><div id="sldEDLOpacity"></div></li>
-				
-				<div class="divider"><span>Background</span></div>
-
-				<li>
-					<selectgroup id="background_options">
-						<option id="background_options_skybox" value="skybox">Skybox</option>
-						<option id="background_options_gradient" value="gradient">Gradient</option>
-						<option id="background_options_black" value="black">Black</option>
-						<option id="background_options_white" value="white">White</option>
-						<option id="background_options_none" value="null">None</option>
-					</selectgroup>
-				</li>
-
-				<div class="divider"><span>Other</span></div>
-
-				<li>
-					<selectgroup id="splat_quality_options">
-						<option id="splat_quality_options_standard" value="standard">Standard</option>
-						<option id="splat_quality_options_hq" value="hq">High Quality</option>
-					</selectgroup>
-				</li>
-				
-				<li><span data-i18n="appearance.min_node_size"></span>: <span id="lblMinNodeSize"></span><div id="sldMinNodeSize"></div></li>
-				<li><label><input id="show_bounding_box" type="checkbox" /><span data-i18n="appearance.box"></span></label></li>
-				<li><label><input id="set_freeze" type="checkbox" /><span data-i18n="appearance.freeze"></span></label></li>
-			</ul>
-			
-		</div>
-		
-		<!-- TOOLS -->
-		<h3 id="menu_tools"><span data-i18n="tb.tools_opt"></span></h3>
-		<div class="pv-menu-list">
-
-			<div class="divider"><span>Measurement</span></div>
-
-			<li id="tools"></li>
-
-			<li>
-				<selectgroup id="measurement_options_show">
-					<option id="measurement_options_show_yes" value="SHOW">Show</option>
-					<option id="measurement_options_show_no" value="HIDE">Hide</option>
-				</selectgroup>
-			</li>
-
-			<div class="divider"><span>Clipping</span></div>
-
-			<li id="clipping_tools"></li>
-
-			<li>
-				<selectgroup id="cliptask_options">
-					<option id="cliptask_options_none" value="NONE">None</option>
-					<option id="cliptask_options_highlight" value="HIGHLIGHT">Highlight</option>
-					<option id="cliptask_options_show_inside" value="SHOW_INSIDE">Inside</option>
-					<option id="cliptask_options_show_outside" value="SHOW_OUTSIDE">Outside</option>
-				</selectgroup>
-			</li>
-
-			<li>
-				<selectgroup id="clipmethod_options">
-					<option id="clipmethod_options_any" value="INSIDE_ANY">Inside Any</option>
-					<option id="clipmethod_options_all" value="INSIDE_ALL">Inside All</option>
-				</selectgroup>
-			</li>
-			
-			<div class="divider"><span>Navigation</span></div>
-
-			<li id="navigation"></li>
-
-			<li><span data-i18n="appearance.move_speed"></span>: <span id="lblMoveSpeed"></span><div id="sldMoveSpeed"></div></li>
-		</div>
-
-		<!-- SCENE -->
-		<h3 id="menu_scene"><span data-i18n="tb.scene_opt"></span></h3>
-		<div class="pv-menu-list">
-
-			<div id="scene_export"></div>
-
-			<div class="divider"><span>Objects</span></div>
-
-			<div id="scene_objects"></div>
-
-			<div class="divider"><span>Properties</span></div>
-
-			<div id="scene_object_properties"></div>
-		</div>
-
-		<!-- Classification -->
-		<h3 id="menu_filters"><span data-i18n="tb.filters_opt"></span></h3>
-		<div>
-
-			<div class="divider"><span>Classification</span></div>
-
-			<ul id="classificationList" class="pv-menu-list"></ul>
-
-			<div class="divider"><span>Returns</span></div>
-
-			<div id="return_filter_panel">
-				<ul class="pv-menu-list">
-					
-					<li><span data-i18n="filters.return_number"></span>: <span id="lblReturnNumber"></span> <div id="sldReturnNumber"></div></li>
-					<li><span data-i18n="filters.number_of_returns"></span>: <span id="lblNumberOfReturns"></span> <div id="sldNumberOfReturns"></div></li>
-
-				</ul>
-			</div>
-
-			<div class="divider"><span>Point Source ID</span></div>
-
-			<div>
-				<ul class="pv-menu-list" id="pointsourceid_filter_panel">
-
-				</ul>
-			</div>
-
-			<div class="divider"><span>GPS Time</span></div>
-
-			<div id="gpstime_filter_panel">
-
-				<ul class="pv-menu-list">
-					<div id="gpstime_multilevel_range_container">
-
-						<li>
-							<span style="display: flex">
-								<span>Time: </span>
-								<input id="txtGpsTime" type="text" style="margin: auto 10px"/>
-								<input id="btnFindGpsTime" type="button" value="find" />
-							</span>
-						</li>
-
+						<div class="border-t border-gray-600 pt-4">
+							<h4 class="text-sm font-medium text-gray-200 mb-3">Properties</h4>
+							<div id="scene_object_properties"></div>
+						</div>
+					</div>
+				</div>
 					</div>
 
-				</ul>
+		</div>
 
+		<!-- BOTTOM 50% - TABBED SECTIONS -->
+		<div class="h-1/2 flex flex-col">
+			<!-- Tab Navigation -->
+			<div class="px-4 pt-4">
+				<div class="mb-4 border-b border-gray-700">
+					<ul class="flex flex-wrap -mb-px text-sm font-medium text-center" id="default-styled-tab" data-tabs-toggle="#default-styled-tab-content" data-tabs-active-classes="text-purple-600 hover:text-purple-600 dark:text-purple-500 dark:hover:text-purple-500 border-purple-600 dark:border-purple-500" data-tabs-inactive-classes="dark:border-transparent text-gray-500 hover:text-gray-600 dark:text-gray-400 border-gray-100 hover:border-gray-300 dark:border-gray-700 dark:hover:text-gray-300" role="tablist">
+						<li class="me-2" role="presentation">
+							<button class="inline-block p-3 border-b-2 rounded-t-lg text-purple-600 hover:text-purple-600 dark:text-purple-500 dark:hover:text-purple-500 border-purple-600 dark:border-purple-500" id="appearance-styled-tab" data-tabs-target="#styled-appearance" type="button" role="tab" aria-controls="appearance" aria-selected="true">Appearance</button>
+						</li>
+						<li class="me-2" role="presentation">
+							<button class="inline-block p-3 border-b-2 rounded-t-lg dark:border-transparent text-gray-500 hover:text-gray-600 dark:text-gray-400 border-gray-100 hover:border-gray-300 dark:border-gray-700 dark:hover:text-gray-300" id="tools-styled-tab" data-tabs-target="#styled-tools" type="button" role="tab" aria-controls="tools" aria-selected="false">Tools</button>
+						</li>
+						<li class="me-2" role="presentation">
+							<button class="inline-block p-3 border-b-2 rounded-t-lg dark:border-transparent text-gray-500 hover:text-gray-600 dark:text-gray-400 border-gray-100 hover:border-gray-300 dark:border-gray-700 dark:hover:text-gray-300" id="filters-styled-tab" data-tabs-target="#styled-filters" type="button" role="tab" aria-controls="filters" aria-selected="false">Filters</button>
+						</li>
+						<li role="presentation">
+							<button class="inline-block p-3 border-b-2 rounded-t-lg dark:border-transparent text-gray-500 hover:text-gray-600 dark:text-gray-400 border-gray-100 hover:border-gray-300 dark:border-gray-700 dark:hover:text-gray-300" id="about-styled-tab" data-tabs-target="#styled-about" type="button" role="tab" aria-controls="about" aria-selected="false">About</button>
+						</li>
+					</ul>
+				</div>
+			</div>
+
+			<!-- Tab Content -->
+			<div class="flex-1 p-4 overflow-hidden">
+				<div id="default-styled-tab-content" class="h-full overflow-y-auto scrollbar-hide">
+					<!-- APPEARANCE TAB -->
+					<div class="p-4 rounded-lg bg-gray-800" id="styled-appearance" role="tabpanel" aria-labelledby="appearance-styled-tab">
+						<div class="space-y-4">
+					<!-- Point Budget -->
+					<div class="flex items-center justify-between">
+						<span class="text-sm text-gray-300" data-i18n="appearance.nb_max_pts">Max Points:</span>
+						<div class="flex items-center space-x-2">
+							<span id="lblPointBudget" class="text-sm text-white"></span>
+							<div id="sldPointBudget" class="w-24"></div>
+						</div>
+					</div>
+					
+					<!-- Field of View -->
+					<div class="flex items-center justify-between">
+						<span class="text-sm text-gray-300" data-i18n="appearance.field_view">Field of View:</span>
+						<div class="flex items-center space-x-2">
+							<span id="lblFOV" class="text-sm text-white"></span>
+							<div id="sldFOV" class="w-24"></div>
+						</div>
+					</div>
+
+					<!-- Eye-Dome-Lighting Section -->
+					<div class="border-t border-gray-600 pt-4 mt-4">
+						<h4 class="text-sm font-medium text-gray-200 mb-3">Eye-Dome-Lighting</h4>
+						
+						<div class="space-y-3">
+							<label class="flex items-center space-x-2">
+								<input type="checkbox" id="chkEDLEnabled" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"/>
+								<span class="text-sm text-gray-300" data-i18n="appearance.edl_enable">Enable EDL</span>
+							</label>
+							
+							<div class="flex items-center justify-between">
+								<span class="text-sm text-gray-300" data-i18n="appearance.edl_radius">EDL Radius:</span>
+								<div class="flex items-center space-x-2">
+									<span id="lblEDLRadius" class="text-sm text-white"></span>
+									<div id="sldEDLRadius" class="w-24"></div>
+								</div>
+							</div>
+							
+							<div class="flex items-center justify-between">
+								<span class="text-sm text-gray-300" data-i18n="appearance.edl_strength">EDL Strength:</span>
+								<div class="flex items-center space-x-2">
+									<span id="lblEDLStrength" class="text-sm text-white"></span>
+									<div id="sldEDLStrength" class="w-24"></div>
+								</div>
+							</div>
+							
+							<div class="flex items-center justify-between">
+								<span class="text-sm text-gray-300" data-i18n="appearance.edl_opacity">EDL Opacity:</span>
+								<div class="flex items-center space-x-2">
+									<span id="lblEDLOpacity" class="text-sm text-white"></span>
+									<div id="sldEDLOpacity" class="w-24"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				
+					<!-- Background Section -->
+					<div class="border-t border-gray-600 pt-4 mt-4">
+						<h4 class="text-sm font-medium text-gray-200 mb-3">Background</h4>
+						<selectgroup id="background_options" class="grid grid-cols-2 gap-2">
+							<option id="background_options_skybox" value="skybox" class="px-3 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-600 cursor-pointer text-center">Skybox</option>
+							<option id="background_options_gradient" value="gradient" class="px-3 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-600 cursor-pointer text-center">Gradient</option>
+							<option id="background_options_black" value="black" class="px-3 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-600 cursor-pointer text-center">Black</option>
+							<option id="background_options_white" value="white" class="px-3 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-600 cursor-pointer text-center">White</option>
+							<option id="background_options_none" value="null" class="px-3 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-600 cursor-pointer text-center col-span-2">None</option>
+						</selectgroup>
+					</div>
+
+					<!-- Other Options Section -->
+					<div class="border-t border-gray-600 pt-4 mt-4">
+						<h4 class="text-sm font-medium text-gray-200 mb-3">Other</h4>
+						
+						<div class="space-y-3">
+							<div>
+								<h5 class="text-xs text-gray-400 mb-2">Splat Quality</h5>
+								<selectgroup id="splat_quality_options" class="grid grid-cols-2 gap-2">
+									<option id="splat_quality_options_standard" value="standard" class="px-3 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-600 cursor-pointer text-center">Standard</option>
+									<option id="splat_quality_options_hq" value="hq" class="px-3 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-600 cursor-pointer text-center">High Quality</option>
+								</selectgroup>
+							</div>
+							
+							<div class="flex items-center justify-between">
+								<span class="text-sm text-gray-300" data-i18n="appearance.min_node_size">Min Node Size:</span>
+								<div class="flex items-center space-x-2">
+									<span id="lblMinNodeSize" class="text-sm text-white"></span>
+									<div id="sldMinNodeSize" class="w-24"></div>
+								</div>
+							</div>
+							
+							<label class="flex items-center space-x-2">
+								<input id="show_bounding_box" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"/>
+								<span class="text-sm text-gray-300" data-i18n="appearance.box">Show Bounding Box</span>
+							</label>
+							
+							<label class="flex items-center space-x-2">
+								<input id="set_freeze" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"/>
+								<span class="text-sm text-gray-300" data-i18n="appearance.freeze">Freeze</span>
+							</label>
+							</div>
+						</div>
+					</div>
+					</div>
+
+					<!-- TOOLS TAB -->
+					<div class="hidden p-4 rounded-lg bg-gray-800" id="styled-tools" role="tabpanel" aria-labelledby="tools-styled-tab">
+						<div class="space-y-4">
+							<!-- Measurement Section -->
+							<div>
+								<h4 class="text-sm font-medium text-gray-200 mb-3">Measurement</h4>
+								<div id="tools" class="mb-3"></div>
+								<selectgroup id="measurement_options_show" class="grid grid-cols-2 gap-2">
+									<option id="measurement_options_show_yes" value="SHOW" class="px-3 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-600 cursor-pointer text-center">Show</option>
+									<option id="measurement_options_show_no" value="HIDE" class="px-3 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-600 cursor-pointer text-center">Hide</option>
+								</selectgroup>
+							</div>
+
+							<!-- Clipping Section -->
+							<div class="border-t border-gray-600 pt-4">
+								<h4 class="text-sm font-medium text-gray-200 mb-3">Clipping</h4>
+								
+								<div class="space-y-3">
+									<div id="clipping_tools" class="mb-3"></div>
+									
+									<div>
+										<h5 class="text-xs text-gray-400 mb-2">Clip Task</h5>
+										<selectgroup id="cliptask_options" class="grid grid-cols-2 gap-2">
+											<option id="cliptask_options_none" value="NONE" class="px-3 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-600 cursor-pointer text-center">None</option>
+											<option id="cliptask_options_highlight" value="HIGHLIGHT" class="px-3 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-600 cursor-pointer text-center">Highlight</option>
+											<option id="cliptask_options_show_inside" value="SHOW_INSIDE" class="px-3 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-600 cursor-pointer text-center">Inside</option>
+											<option id="cliptask_options_show_outside" value="SHOW_OUTSIDE" class="px-3 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-600 cursor-pointer text-center">Outside</option>
+										</selectgroup>
+									</div>
+									
+									<div>
+										<h5 class="text-xs text-gray-400 mb-2">Clip Method</h5>
+										<selectgroup id="clipmethod_options" class="grid grid-cols-2 gap-2">
+											<option id="clipmethod_options_any" value="INSIDE_ANY" class="px-3 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-600 cursor-pointer text-center">Inside Any</option>
+											<option id="clipmethod_options_all" value="INSIDE_ALL" class="px-3 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-600 cursor-pointer text-center">Inside All</option>
+										</selectgroup>
+									</div>
+								</div>
+							</div>
+					
+							<!-- Navigation Section -->
+							<div class="border-t border-gray-600 pt-4">
+								<h4 class="text-sm font-medium text-gray-200 mb-3">Navigation</h4>
+								
+								<div class="space-y-3">
+									<div id="navigation" class="mb-3"></div>
+									
+									<div class="flex items-center justify-between">
+										<span class="text-sm text-gray-300" data-i18n="appearance.move_speed">Move Speed:</span>
+										<div class="flex items-center space-x-2">
+											<span id="lblMoveSpeed" class="text-sm text-white"></span>
+											<div id="sldMoveSpeed" class="w-24"></div>
+										</div>
+									</div>
+									</div>
+									</div>
+									</div>
+								</div>
+
+					<!-- FILTERS TAB -->
+					<div class="hidden p-4 rounded-lg bg-gray-800" id="styled-filters" role="tabpanel" aria-labelledby="filters-styled-tab">
+						<!-- FILTERS / CLASSIFICATION -->
+						<h3 id="menu_filters" class="text-sm font-medium text-gray-200 mb-4">Filters</h3>
+						<div class="space-y-4">
+							<!-- Classification Section -->
+							<div>
+								<div class="text-sm font-semibold text-gray-200 mb-3">Classification</div>
+								<ul id="classificationList" class="space-y-2"></ul>
+							</div>
+
+							<!-- Returns Section -->
+							<div class="border-t border-gray-600 pt-4">
+								<div class="text-sm font-semibold text-gray-200 mb-3">Returns</div>
+								<div id="return_filter_panel">
+									<div class="space-y-3">
+										<div class="flex items-center justify-between">
+											<span class="text-sm text-gray-300" data-i18n="filters.return_number">Return Number</span>
+											<span id="lblReturnNumber" class="text-sm text-white">0 to 7</span>
+										</div>
+										<div id="sldReturnNumber" class="w-full"></div>
+										
+										<div class="flex items-center justify-between">
+											<span class="text-sm text-gray-300" data-i18n="filters.number_of_returns">Number of Returns</span>
+											<span id="lblNumberOfReturns" class="text-sm text-white">0 to 7</span>
+										</div>
+										<div id="sldNumberOfReturns" class="w-full"></div>
+									</div>
+								</div>
+							</div>
+
+							<!-- Point Source ID Section -->
+							<div class="border-t border-gray-600 pt-4">
+								<div class="text-sm font-semibold text-gray-200 mb-3">Point Source ID</div>
+								<ul id="pointsourceid_filter_panel" class="space-y-2">
+									<!-- Point source ID controls will be populated by JavaScript -->
+									<div class="text-xs text-gray-400 italic">Loading point source filters...</div>
+								</ul>
+							</div>
+
+							<!-- GPS Time Section -->
+							<div class="border-t border-gray-600 pt-4">
+								<div class="text-sm font-semibold text-gray-200 mb-3">GPS Time</div>
+								<div id="gpstime_filter_panel">
+									<div id="gpstime_multilevel_range_container">
+										<div class="flex items-center space-x-2">
+											<span class="text-sm text-gray-300">Time:</span>
+											<input id="txtGpsTime" type="text" class="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter GPS time"/>
+											<button id="btnFindGpsTime" class="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">Find</button>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- ABOUT TAB -->
+					<div class="hidden p-4 rounded-lg bg-gray-800" id="styled-about" role="tabpanel" aria-labelledby="about-styled-tab">
+						<div class="space-y-4 text-sm">
+							<!-- Moved sidebar header -->
+							<div id="sidebar_header" class="p-4 border-b border-gray-700">
+								<div id="potree_branding" class="potree_sidebar_brand flex items-center justify-between">
+									<div class="flex items-center space-x-2 text-sm">
+										<a href="http://potree.org" target="_blank" class="text-blue-400 hover:text-blue-300 transition-colors">potree.org</a>
+										<span class="text-gray-400">-</span>
+										<a href="https://github.com/potree/potree" target="_blank" class="text-blue-400 hover:text-blue-300 transition-colors">github</a>
+										<span class="text-gray-400">-</span>
+										<a href="https://twitter.com/m_schuetz" target="_blank" class="text-blue-400 hover:text-blue-300 transition-colors">twitter</a>
+									</div>
+									<span id="potree_version_number" class="text-gray-400 text-xs font-light">1.8.0</span>
+								</div>
+								<div id="potree_languages" class="mt-2 font-sans"><a style="margin-left: 30px;">EN</a> - <a>FR</a> - <a>DE</a> - <a>JP</a> - <a>ES</a> - <a>SE</a> - <a>ZH</a> - <a>IT</a> - <a>CA</a></div>
+							</div>
+					<div class="bg-gray-800 rounded-lg p-4">
+						<p class="text-gray-300 leading-relaxed">
+							<a href="http://potree.org" target="_blank" class="text-blue-400 hover:text-blue-300 font-medium">Potree</a> is a viewer for large point cloud / LIDAR data sets, developed at the Vienna University of Technology. 
+							<a href="https://github.com/potree/potree" target="_blank" class="text-blue-400 hover:text-blue-300">(github)</a>
+						</p>
+					</div>
+					
+					<div class="space-y-2">
+						<div class="flex">
+							<span class="font-medium text-gray-200 w-20">Author:</span>
+							<a href="mailto:mschuetz@potree.org" class="text-blue-400 hover:text-blue-300">Markus Schütz</a>
+						</div>
+						<div class="flex">
+							<span class="font-medium text-gray-200 w-20">License:</span>
+							<a target="_blank" href="https://github.com/potree/potree/blob/develop/LICENSE/" class="text-blue-400 hover:text-blue-300">FreeBSD (2-clause BSD)</a>
+						</div>
+						<div class="flex">
+							<span class="font-medium text-gray-200 w-20">Dependencies:</span>
+							<a target="_blank" href="https://github.com/potree/potree/tree/develop/libs/" class="text-blue-400 hover:text-blue-300">See github</a>
+						</div>
+					</div>
+
+					<div class="border-t border-gray-600 pt-4">
+						<h4 class="font-medium text-gray-200 mb-3">Funding</h4>
+						<p class="text-gray-300 text-xs leading-relaxed mb-4">
+							Potree is funded by a combination of research projects, companies, institutions and individuals. If you're making good use of Potree, please consider funding its future development 
+							<a href="https://github.com/sponsors/potree" class="text-blue-400 hover:text-blue-300">via Github Sponsors</a> or by directly inquiring 
+							<a href="mailto:mschuetz@potree.org" class="text-blue-400 hover:text-blue-300">via e-mail</a>.
+						</p>
+
+						<div class="space-y-4">
+							<div>
+								<h5 class="text-xs font-medium text-gray-300 mb-2">Research Projects</h5>
+								<div class="bg-gray-800 rounded-lg overflow-hidden">
+									<table class="w-full text-xs">
+										<thead class="bg-gray-700">
+											<tr>
+												<th class="px-3 py-2 text-left text-gray-200">Project Name</th>
+												<th class="px-3 py-2 text-left text-gray-200">Funding Agency</th>
+											</tr>
+										</thead>
+										<tbody class="text-gray-300">
+											<tr class="border-b border-gray-700">
+												<td class="px-3 py-2"><a href="https://projekte.ffg.at/projekt/3851914" class="text-blue-400 hover:text-blue-300">LargeClouds2BIM</a></td>
+												<td class="px-3 py-2"><a href="https://www.ffg.at/" class="text-blue-400 hover:text-blue-300">FFG</a></td>
+											</tr>
+											<tr class="border-b border-gray-700">
+												<td class="px-3 py-2"><a href="https://harvest4d.org/" class="text-blue-400 hover:text-blue-300">Harvest4D</a></td>
+												<td class="px-3 py-2"><a href="https://ec.europa.eu/transport/themes/research/fp7_en" class="text-blue-400 hover:text-blue-300">EU 7th Framework Program 323567</a></td>
+											</tr>
+											<tr class="border-b border-gray-700">
+												<td class="px-3 py-2"><a href="https://gcd.tuwien.ac.at/" class="text-blue-400 hover:text-blue-300">GCD Doctoral College</a></td>
+												<td class="px-3 py-2"><a href="https://www.tuwien.at/en/" class="text-blue-400 hover:text-blue-300">TU Wien</a></td>
+											</tr>
+											<tr>
+												<td class="px-3 py-2"><a href="https://www.cg.tuwien.ac.at/research/projects/Superhumans/" class="text-blue-400 hover:text-blue-300">Superhumans</a></td>
+												<td class="px-3 py-2"><a href="https://www.fwf.ac.at/" class="text-blue-400 hover:text-blue-300">FWF</a></td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</div>
+
+							<div>
+								<h5 class="text-xs font-medium text-gray-300 mb-3">Supporting Organizations</h5>
+								<div class="bg-gray-800 rounded-lg p-3">
+									<div class="space-y-3 text-center text-xs">
+										<div>
+											<div class="font-medium text-yellow-400 mb-2">• Diamond •</div>
+											<div class="space-y-1 text-gray-300">
+												<div><a href="http://www.ne.ch/autorites/DDTE/SGRF/SITN/Pages/accueil.aspx" class="text-blue-400 hover:text-blue-300">SITN</a></div>
+												<div><a href="http://synth.earth/" class="text-blue-400 hover:text-blue-300">Synth</a></div>
+												<div><a href="http://www.geocue.com" class="text-blue-400 hover:text-blue-300">GeoCue Group</a></div>
+												<div><a href="http://rapidlasso.com" class="text-blue-400 hover:text-blue-300">Rapidlasso</a></div>
+											</div>
+										</div>
+
+										<div>
+											<div class="font-medium text-yellow-300 mb-2">• Gold •</div>
+											<div class="text-gray-300">
+												<div><a href="https://www.bart.gov" class="text-blue-400 hover:text-blue-300">BART</a></div>
+											</div>
+										</div>
+
+										<div>
+											<div class="font-medium text-gray-300 mb-2">• Silver •</div>
+											<div class="space-y-1 text-gray-300">
+												<div><a href="https://biology.anu.edu.au/research/facilities/australian-plant-phenomics-facility-anu" class="text-blue-400 hover:text-blue-300">APPF ANU</a></div>
+												<div><a href="https://www.limit-addict.fr/" class="text-blue-400 hover:text-blue-300">LimitAddict</a></div>
+												<div><a href="http://georepublic.info" class="text-blue-400 hover:text-blue-300">Georepublic</a></div>
+											</div>
+										</div>
+
+										<div>
+											<div class="font-medium text-orange-400 mb-2">• Bronze •</div>
+											<div class="grid grid-cols-2 gap-1 text-gray-300">
+												<div><a href="https://www.eventart.at/" class="text-blue-400 hover:text-blue-300">EventArt</a></div>
+												<div><a href="https://www.geodelta.com/" class="text-blue-400 hover:text-blue-300">Geodelta</a></div>
+												<div><a href="https://www.e-cassini.fr/" class="text-blue-400 hover:text-blue-300">E-Cassini</a></div>
+												<div><a href="https://www.sogelink.fr/" class="text-blue-400 hover:text-blue-300">Sogelink</a></div>
+												<div>Data-viewer</div>
+												<div><a href="http://www.helimap.com/" class="text-blue-400 hover:text-blue-300">Helimap</a></div>
+												<div><a href="http://www.vevey.ch/" class="text-blue-400 hover:text-blue-300">Vevey</a></div>
+												<div><a href="https://www.yverdon-les-bains.ch/" class="text-blue-400 hover:text-blue-300">yverdon-les-bains</a></div>
+												<div><a href="http://archpro.lbg.ac.at" class="text-blue-400 hover:text-blue-300">LBI ArchPro</a></div>
+												<div><a href="http://www.kts.co.jp" class="text-blue-400 hover:text-blue-300">KTS</a></div>
+												<div><a href="http://veesus.com" class="text-blue-400 hover:text-blue-300">Veesus</a></div>
+												<div><a href="http://www.sigeom.ch" class="text-blue-400 hover:text-blue-300">Sigeom</a></div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						</div>
+					</div>
+				</div>
 			</div>
 		</div>
-		
-		<!-- ABOUT -->
-		<h3 id="menu_about"><span data-i18n="tb.about_opt"></span></h3>
-		<div>
-			<ul class="pv-menu-list">
-				<li><a href="http://potree.org" target="_blank">Potree</a> is a viewer for large point cloud / LIDAR data sets, developed at the Vienna University of Technology. 
-				<a href="https://github.com/potree/potree" target="_blank">(github)</a>
-				</li>
-				<li><b>Author: </b><a href="mailto:mschuetz@potree.org">Markus Sch&uuml;tz</a></li>
-				<li><b>License: </b><a target="_blank" href="https://github.com/potree/potree/blob/develop/LICENSE/">FreeBSD (2-clause BSD)</a></li>
-				<li><b>Dependency Licenses:</b> <a target="_blank" href="https://github.com/potree/potree/tree/develop/libs/">See github</a></li>
-
-<li>
-<b>Funding:</b>
-Potree is funded by a combination of research projects, companies, institutions and individuals. If you're making good use of Potree, please consider funding its future development <a href="https://github.com/sponsors/potree">via Github Sponsors</a> or by directly inquiring <a href="mailto:mschuetz@potree.org">via e-mail</a>.
-
-<br>
-<br>
-Research projects who's funding contributes to Potree:
-
-<table>
-	<tr>
-		<th>Project Name</th>
-		<th>Funding Agency</th>
-	</tr>
-	<tr>
-		<td><a href="https://projekte.ffg.at/projekt/3851914">LargeClouds2BIM</a></td>
-		<td><a href="https://www.ffg.at/">FFG</a></td>
-	</tr>
-	<tr>
-		<td><a href="https://harvest4d.org/">Harvest4D</a></td>
-		<td><a href="https://ec.europa.eu/transport/themes/research/fp7_en">EU 7th Framework Program 323567</a></td>
-	</tr>
-	<tr>
-		<td><a href="https://gcd.tuwien.ac.at/">GCD Doctoral College</a></td>
-		<td><a href="https://www.tuwien.at/en/">TU Wien</a></td>
-	</tr>
-	<tr>
-		<td><a href="https://www.cg.tuwien.ac.at/research/projects/Superhumans/">Superhumans</a></td>
-		<td><a href="https://www.fwf.ac.at/">FWF</a></td>
-	</tr>
-</table>
-
-<br>
-Thanks to all the companies and institutions funding Potree:
-
-<table style="width: 100%; text-align: center;">
-	<tr>
-		<th style="padding-top: 0.7em;">• Diamond •</th>
-	</tr>
-	
-	<tr><td><a href="http://www.ne.ch/autorites/DDTE/SGRF/SITN/Pages/accueil.aspx">SITN</a> </td></tr>
-	<tr><td><a href="http://synth.earth/">Synth</a></td></tr>
-	<tr><td><a href="http://www.geocue.com">GeoCue Group</a> </td></tr>
-	<tr><td><a href="http://rapidlasso.com">Rapidlasso</a> </td></tr>
-
-	<tr>
-		<th style="padding-top: 0.7em;">• Gold •</th>
-	</tr>
-	<tr><td><a href="https://www.bart.gov">BART</a></td></tr>
-	<tr>
-		<th style="padding-top: 0.7em;">• Silver •</th>
-	</tr>
-	<tr><td><a href="https://biology.anu.edu.au/research/facilities/australian-plant-phenomics-facility-anu">APPF ANU</a></td></tr>
-	<tr><td><a href="https://www.limit-addict.fr/">LimitAddict</a></td></tr>
-	<tr><td><a href="http://georepublic.info">Georepublic</a></td></tr>
-	<tr>
-		<th style="padding-top: 0.7em;">• Bronze •</th>
-	</tr>
-	<tr><td><a href="https://www.eventart.at/">EventArt</a></td></tr>
-	<tr><td><a href="https://www.geodelta.com/">Geodelta</a></td></tr>
-	<tr><td><a href="https://www.e-cassini.fr/">E-Cassini</a></td></tr>
-	<tr><td><a href="https://www.sogelink.fr/">Sogelink</a></td></tr>
-	<tr><td>Data-viewer</td></tr>
-	<tr><td><a href="http://www.helimap.com/">Helimap</a></td></tr>
-	<tr><td><a href="http://www.vevey.ch/">Vevey</a></td></tr>
-	<tr><td><a href="https://www.yverdon-les-bains.ch/">yverdon-les-bains</a></td></tr>
-	<tr><td><a href="http://archpro.lbg.ac.at">LBI ArchPro</a> </td></tr>
-	<tr><td><a href="http://www.kts.co.jp">KTS</a></td></tr>
-	<tr><td><a href="http://veesus.com">Veesus</a></td></tr>
-	<tr><td><a href="http://www.sigeom.ch">Sigeom</a></td></tr>
-</table>
-</li>
-
-				
-
-			
-			</ul>
-		</div>
 
 	</div>
 
-	<div>
-			<br>
-			<br>
-			<br>
-			<br>
-			<br>
-			<br>
-			<br>
-			<br>
-			<br>
-			<br>
-			<br>
-			<br>
-			<br>
-		</div>
-	</div>
-	
+	<style>
+		/* Hide scrollbar for Chrome, Safari and Opera */
+		.scrollbar-hide::-webkit-scrollbar {
+			display: none;
+		}
+
+		/* Hide scrollbar for IE, Edge and Firefox */
+		.scrollbar-hide {
+			-ms-overflow-style: none;  /* IE and Edge */
+			scrollbar-width: none;  /* Firefox */
+		}
+
+		/* Measurement tools: horizontal stack with wrap and small gaps.
+		   Keeps items compact and allows horizontal scroll if they overflow. */
+		#tools{
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.5rem;
+			align-items: center;
+			overflow-x: auto;
+			padding: 0.125rem 0;
+		}
+		#tools > *{
+			margin: 0;
+			flex: 0 0 auto;
+		}
+
+		/* Clipping tools: match measurement layout for compact horizontal grouping */
+		#clipping_tools{
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.5rem;
+			align-items: center;
+			overflow-x: auto;
+			padding: 0.125rem 0;
+		}
+		#clipping_tools > *{
+			margin: 0;
+			flex: 0 0 auto;
+		}
+
+		/* Navigation tools: horizontal compact layout like measurement/clipping */
+		#navigation{
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.5rem;
+			align-items: center;
+			overflow-x: auto;
+			padding: 0.125rem 0;
+		}
+		#navigation > *{
+			margin: 0;
+			flex: 0 0 auto;
+		}
+	</style>
+
+	<script>
+		// Ensure sidebar initializes even when injected after DOMContentLoaded.
+		// Strategy: wait for Flowbite API to be present (load it if missing), then run init.
+
+		function ensureFlowbiteLoaded(cb){
+			if (typeof Dropdown !== 'undefined'){
+				cb();
+				return;
+			}
+
+			// Try to find an existing Flowbite script tag
+			const existing = Array.from(document.scripts).find(s => s.src && s.src.toLowerCase().includes('flowbite'));
+			if (existing){
+				if (existing.getAttribute('data-flowbite-ready') === 'true' || existing.readyState === 'complete'){
+					// already loaded
+					cb();
+					return;
+				}
+				// attach load listener
+				existing.addEventListener('load', function(){ existing.setAttribute('data-flowbite-ready','true'); cb(); }, { once: true });
+				return;
+			}
+
+			// otherwise, inject Flowbite script dynamically
+			const s = document.createElement('script');
+			s.src = 'https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js';
+			s.async = true;
+			s.addEventListener('load', function(){ s.setAttribute('data-flowbite-ready','true'); cb(); }, { once: true });
+			s.addEventListener('error', function(){ console.warn('Failed to load Flowbite script'); cb(); }, { once: true });
+			document.head.appendChild(s);
+		}
+
+		function initSidebar(){
+			console.log('Initializing sidebar DOM behavior');
+
+			// DEBUG: check whether Flowbite script tag is present and whether its API is available
+			try{
+				const flowbiteScript = Array.from(document.scripts).find(s => s.src && s.src.toLowerCase().includes('flowbite'));
+				console.log('Flowbite script tag found:', !!flowbiteScript, flowbiteScript ? flowbiteScript.src : null);
+				console.log('Dropdown constructor present:', typeof Dropdown !== 'undefined');
+			} catch(e) {
+				console.warn('Flowbite presence check failed', e);
+			}
+
+			// Helper: call when viewer/sidebar is ready
+			function whenViewerReady(fn){
+				if (window.viewer && window.viewer.sidebar) {
+					fn();
+					return;
+				}
+				// fallback to potree readiness event
+				window.addEventListener('potree:viewerReady', function onReady(){
+					window.removeEventListener('potree:viewerReady', onReady);
+					fn();
+				}, { once: true });
+			}
+
+			// Initialize Potree filters only when sidebar is available, and only once per page load
+						if (!window._potreeSidebarFiltersInitialized) {
+							window._potreeSidebarFiltersInitialized = true;
+							whenViewerReady(function(){
+								if (window.viewer && window.viewer.sidebar && typeof window.viewer.sidebar.initFilters === 'function'){
+									console.log('Initializing sidebar filters (deferred, idempotent)');
+									window.viewer.sidebar.initFilters();
+								} else if (window.sidebar && typeof window.sidebar.initFilters === 'function'){
+									console.log('Initializing sidebar filters (legacy, idempotent)');
+									window.sidebar.initFilters();
+								} else {
+									console.warn('No sidebar.initFilters() available when ready');
+								}
+							});
+						} else {
+							console.log('Sidebar filters already initialized, skipping duplicate init.');
+						}
+
+			// Fallback tab initializer: ensures tab buttons toggle panels even if Flowbite misses initialization
+			function initTabsFallback(){
+				try{
+					const tabGroups = document.querySelectorAll('[data-tabs-toggle]');
+					for(const group of tabGroups){
+						const contentSelector = group.getAttribute('data-tabs-toggle');
+						const contentRoot = document.querySelector(contentSelector);
+						const buttons = Array.from(group.querySelectorAll('[data-tabs-target]'));
+						const activeClasses = (group.getAttribute('data-tabs-active-classes') || '').split(/\s+/).filter(Boolean);
+						const inactiveClasses = (group.getAttribute('data-tabs-inactive-classes') || '').split(/\s+/).filter(Boolean);
+
+						function setActive(button){
+							// deactivate all buttons
+							for(const b of buttons){
+								b.setAttribute('aria-selected', 'false');
+								// class toggles
+								for(const c of activeClasses){ b.classList.remove(c); }
+								for(const c of inactiveClasses){ b.classList.add(c); }
+							}
+							// activate this button
+							button.setAttribute('aria-selected', 'true');
+							for(const c of activeClasses){ button.classList.add(c); }
+							for(const c of inactiveClasses){ button.classList.remove(c); }
+
+							// show/hide panels
+							if(contentRoot){
+								const panels = Array.from(contentRoot.querySelectorAll('[role="tabpanel"]'));
+								for(const p of panels){ p.classList.add('hidden'); }
+								const targetSelector = button.getAttribute('data-tabs-target');
+								const target = document.querySelector(targetSelector);
+								if(target){ target.classList.remove('hidden'); }
+							}
+						}
+
+						// wire buttons
+						for(const btn of buttons){
+							btn.addEventListener('click', function(e){
+								e.preventDefault();
+								setActive(btn);
+							});
+						}
+
+						// initial state: activate the button with aria-selected=true or first
+						let initial = buttons.find(b => b.getAttribute('aria-selected') === 'true') || buttons[0];
+						if(initial){ setActive(initial); }
+					}
+				}catch(e){ console.warn('initTabsFallback failed', e); }
+			}
+
+			// Run fallback tabs init immediately (Flowbite may also initialize; this is harmless)
+			initTabsFallback();
+
+			// Initialize Flowbite Dropdown (safe to run once Flowbite is present)
+			if (typeof Dropdown !== 'undefined') {
+				const dropdownButton = document.getElementById('export_dropdown_button');
+				const dropdownMenu = document.getElementById('export_dropdown_menu');
+				if (dropdownButton && dropdownMenu) {
+					try{
+						new Dropdown(dropdownMenu, dropdownButton);
+					}catch(e){
+						console.warn('Dropdown initialization failed', e);
+					}
+				}
+			} else {
+				console.debug('Dropdown (Flowbite) not present at init time');
+			}
+
+			// Defensive wrapper for export handlers: defer execution until viewer exists
+			function deferUntilViewer(fn){
+				return function(e){
+					e.preventDefault();
+					if (window.viewer && window.viewer.scene) {
+						fn.call(this, e);
+						return;
+					}
+					console.warn('Viewer not ready - deferring export until potree:viewerReady');
+					window.addEventListener('potree:viewerReady', function onReady(){
+						window.removeEventListener('potree:viewerReady', onReady);
+						fn.call(this, e);
+					}, { once: true });
+				};
+			}
+
+			// Export handlers
+			document.getElementById('export_geojson')?.addEventListener('click', deferUntilViewer(function(e){
+				const annotations = window.viewer.scene.annotations;
+				const geojson = {
+					type: "FeatureCollection",
+					features: (annotations && annotations.children ? annotations.children : []).map(annotation => ({
+						type: "Feature",
+						geometry: {
+							type: "Point",
+							coordinates: [annotation.position.x, annotation.position.y, annotation.position.z]
+						},
+						properties: {
+							title: annotation.title || "Annotation",
+							description: annotation.description || ""
+						}
+					}))
+				};
+				const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/json' });
+				const url = URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = 'measure.json';
+				a.click();
+				URL.revokeObjectURL(url);
+			}));
+
+			document.getElementById('export_dxf')?.addEventListener('click', deferUntilViewer(function(e){
+				// DXF export functionality placeholder
+				console.log('DXF export clicked (deferred)');
+			}));
+
+			document.getElementById('export_potree')?.addEventListener('click', deferUntilViewer(function(e){
+				// Potree export functionality placeholder
+				console.log('Potree export clicked (deferred)');
+			}));
+		}
+
+		function startInit(){
+			ensureFlowbiteLoaded(function(){
+				initSidebar();
+			});
+		}
+
+		// If document is still loading, wait for DOMContentLoaded; otherwise run immediately
+		if (document.readyState === 'loading'){
+			document.addEventListener('DOMContentLoaded', startInit, { once: true });
+		} else {
+			startInit();
+		}
+	</script>
 </div>
 
 

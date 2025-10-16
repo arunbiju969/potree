@@ -286,6 +286,7 @@ export class Sidebar{
 
 			elShow.find("input").click( (e) => {
 				const show = e.target.value === "SHOW";
+				console.debug('[Sidebar] measurement show/hide clicked, value=', e.target.value, '=> showLabels=', show);
 				this.measuringTool.showLabels = show;
 			});
 
@@ -304,18 +305,8 @@ export class Sidebar{
 		{
 			let elExport = elScene.next().find("#scene_export");
 
-			let geoJSONIcon = `${Potree.resourcePath}/icons/file_geojson.svg`;
-			let dxfIcon = `${Potree.resourcePath}/icons/file_dxf.svg`;
-			let potreeIcon = `${Potree.resourcePath}/icons/file_potree.svg`;
-
-			elExport.append(`
-				Export: <br>
-				<a href="#" download="measure.json"><img name="geojson_export_button" src="${geoJSONIcon}" class="button-icon" style="height: 24px" /></a>
-				<a href="#" download="measure.dxf"><img name="dxf_export_button" src="${dxfIcon}" class="button-icon" style="height: 24px" /></a>
-				<a href="#" download="potree.json5"><img name="potree_export_button" src="${potreeIcon}" class="button-icon" style="height: 24px" /></a>
-			`);
-
-			let elDownloadJSON = elExport.find("img[name=geojson_export_button]").parent();
+			// Set up click handlers for dropdown options
+			let elDownloadJSON = elExport.find("#export_geojson");
 			elDownloadJSON.click( (event) => {
 				let scene = this.viewer.scene;
 				let measurements = [...scene.measurements, ...scene.profiles, ...scene.volumes];
@@ -331,7 +322,7 @@ export class Sidebar{
 				}
 			});
 
-			let elDownloadDXF = elExport.find("img[name=dxf_export_button]").parent();
+			let elDownloadDXF = elExport.find("#export_dxf");
 			elDownloadDXF.click( (event) => {
 				let scene = this.viewer.scene;
 				let measurements = [...scene.measurements, ...scene.profiles, ...scene.volumes];
@@ -347,7 +338,7 @@ export class Sidebar{
 				}
 			});
 
-			let elDownloadPotree = elExport.find("img[name=potree_export_button]").parent();
+			let elDownloadPotree = elExport.find("#export_potree");
 			elDownloadPotree.click( (event) => {
 
 				let data = Potree.saveProject(this.viewer);
@@ -365,6 +356,27 @@ export class Sidebar{
 
 		let tree = $(`<div id="jstree_scene"></div>`);
 		elObjects.append(tree);
+
+		// scoped CSS for an inert remove glyph shown on point-cloud list items
+		// purely visual — no event handlers are attached here
+		$(document.head).append(`
+			<style>
+				#jstree_scene .pc-remove {
+					margin-left: 0.5rem;
+					color: #b00;
+					font-weight: 600;
+					cursor: default; /* inert visual */
+					padding: 0 6px;
+					display: inline-block;
+				}
+				#jstree_scene .pc-remove:hover {
+					color: #f00;
+				}
+				/* ensure icons and text align nicely */
+				#jstree_scene .jstree-anchor { white-space: nowrap; }
+				#jstree_scene .jstree-anchor .jstree-themeicon { margin-right: 6px; }
+			</style>
+		`);
 
 		tree.jstree({
 			'plugins': ["checkbox", "state"],
@@ -450,6 +462,11 @@ export class Sidebar{
 			if(e.target.classList.contains("jstree-checkbox")){
 				return;
 			}
+
+			// ensure properties panel is shown/updated for this object so prefs apply immediately
+			try{
+				propertiesPanel.set(object);
+			}catch(err){ console.warn('Failed to set properties panel on dblclick', err); }
 
 			if(object instanceof PointCloudTree){
 				let box = this.viewer.getBoundingBox([object]);
@@ -553,7 +570,55 @@ export class Sidebar{
 		let onPointCloudAdded = (e) => {
 			let pointcloud = e.pointcloud;
 			let cloudIcon = `${Potree.resourcePath}/icons/cloud.svg`;
-			let node = createNode(pcID, pointcloud.name, cloudIcon, pointcloud);
+
+			console.log('[Sidebar][onPointCloudAdded] Called for pointcloud:', pointcloud && pointcloud.name, pointcloud);
+
+			// Add a purely visual remove glyph (×) next to the pointcloud name.
+			// This injects HTML into the node text but does not attach any handlers.
+			let nodeText = `<b title="${pointcloud.name}">${pointcloud.name}</b> <span class="pc-remove" title="Remove">×</span>`;
+
+			let node = createNode(pcID, nodeText, cloudIcon, pointcloud);
+			console.log('[Sidebar][onPointCloudAdded] Created scene tree node:', node, 'for pointcloud:', pointcloud && pointcloud.name);
+
+			// Apply any saved per-pointcloud preferences immediately so settings
+			// are active without the user opening the properties panel. If no
+			// per-file prefs exist, fall back to global defaults saved by the
+			// PropertiesPanel "Save global" action.
+			try{
+				const saved = propertiesPanel.loadPointCloudPrefs(pointcloud);
+				if(saved){
+					console.debug('[Sidebar] Applying saved prefs for pointcloud', pointcloud.name, saved);
+					propertiesPanel.applyPointCloudPrefs(pointcloud, saved);
+				} else {
+					const global = propertiesPanel.loadGlobalPointCloudPrefs && propertiesPanel.loadGlobalPointCloudPrefs();
+					if(global){
+						console.debug('[Sidebar] Applying GLOBAL prefs for pointcloud', pointcloud.name, global);
+						propertiesPanel.applyPointCloudPrefs(pointcloud, global);
+					}
+				}
+			}catch(e){ console.warn('[Sidebar] Failed to apply prefs on add', e); }
+
+			// Zoom to the newly added point cloud
+			if (pointcloud instanceof PointCloudTree) {
+				try {
+					let box = this.viewer.getBoundingBox([pointcloud]);
+					console.log('[Sidebar][onPointCloudAdded] Bounding box for zoom:', box);
+					let zoomNode = new THREE.Object3D();
+					zoomNode.boundingBox = box;
+					console.log('[Sidebar][onPointCloudAdded] Calling viewer.zoomTo with node:', zoomNode);
+					this.viewer.zoomTo(zoomNode, 1, 500);
+					console.log('[Sidebar][onPointCloudAdded] Called viewer.zoomTo successfully.');
+				} catch (err) {
+					console.error('[Sidebar][onPointCloudAdded] Error during zoomTo:', err);
+				}
+			}
+
+			// Ensure the properties panel UI reflects the newly added pointcloud
+			// so users don't have to click it in the scene objects list.
+			try{
+				console.debug('[Sidebar] Setting properties panel for newly added pointcloud', pointcloud && pointcloud.name);
+				propertiesPanel.set(pointcloud);
+			}catch(e){ console.warn('[Sidebar] Failed to set properties panel on add', e); }
 
 			pointcloud.addEventListener("visibility_changed", () => {
 				if(pointcloud.visible){
@@ -563,6 +628,57 @@ export class Sidebar{
 				}
 			});
 		};
+
+		// Delegated handler: when the visual remove glyph is clicked, remove the
+		// corresponding point cloud from the scene and the tree.
+		// Uses the jsTree node's stored `data` reference to find the pointcloud.
+		elObjects.on('click', '.pc-remove', (evt) => {
+			evt.stopPropagation();
+
+			const inst = $.jstree.reference('#jstree_scene');
+			// find closest anchor -> li element
+			const anchor = $(evt.currentTarget).closest('.jstree-anchor')[0];
+			if(!anchor){
+				return;
+			}
+
+			const node = inst.get_node(anchor);
+			if(!node || !node.data){
+				return;
+			}
+
+			const pc = node.data;
+
+			// removal helper: remove from scene.pointclouds and scene.scenePointCloud
+			try{
+				const scene = this.viewer.scene;
+
+				// remove from array
+				const idx = scene.pointclouds.indexOf(pc);
+				if(idx > -1){
+					scene.pointclouds.splice(idx, 1);
+				}
+
+				// remove from three.js scene graph if present
+				if(pc.parent === scene.scenePointCloud){
+					scene.scenePointCloud.remove(pc);
+				}
+
+				// attempt to dispose resources if available
+				if(typeof pc.dispose === 'function'){
+					try{ pc.dispose(); }catch(e){ }
+				}
+
+				// dispatch a removal event for other systems
+				scene.dispatchEvent({ type: 'pointcloud_removed', pointcloud: pc });
+
+				// remove node from tree
+				inst.delete_node(node.id);
+			}catch(e){
+				console.error('[Sidebar] error removing pointcloud', e);
+			}
+
+		});
 
 		let onMeasurementAdded = (e) => {
 			let measurement = e.measurement;
@@ -900,6 +1016,7 @@ export class Sidebar{
 				min: 0, max: 7, step: 1,
 				values: [0, 7],
 				slide: (event, ui) => {
+					console.debug('[Sidebar] sldReturnNumber.slide values=', ui.values);
 					this.viewer.setFilterReturnNumberRange(ui.values[0], ui.values[1])
 				}
 			});
@@ -925,6 +1042,7 @@ export class Sidebar{
 				min: 0, max: 7, step: 1,
 				values: [0, 7],
 				slide: (event, ui) => {
+					console.debug('[Sidebar] sldNumberOfReturns.slide values=', ui.values);
 					this.viewer.setFilterNumberOfReturnsRange(ui.values[0], ui.values[1])
 				}
 			});
@@ -950,6 +1068,7 @@ export class Sidebar{
 			let slider = new HierarchicalSlider({
 				levels: 4,
 				slide: (event) => {
+					console.debug('[Sidebar] gpsTime slider slide values=', event.values);
 					this.viewer.setFilterGPSTimeRange(...event.values);
 				},
 			});
@@ -990,28 +1109,29 @@ export class Sidebar{
 
 			let targetTime = null;
 
-			txtGpsTime.on("input", (e) => {
+				txtGpsTime.on("input", (e) => {
 				const str = txtGpsTime.val();
 
-				if(!isNaN(str)){
+					if(!isNaN(str)){
 					const value = parseFloat(str);
 					targetTime = value;
 
-					txtGpsTime.css("background-color", "")
+						console.debug('[Sidebar] txtGpsTime input parsed value=', value);
+						txtGpsTime.css("background-color", "")
 				}else{
 					targetTime = null;
 
 					txtGpsTime.css("background-color", "#ff9999")
 				}
 
-			});
+				});
 
-			btnFindGpsTime.click( () => {
-				
-				if(targetTime !== null){
-					viewer.moveToGpsTimeVicinity(targetTime);
-				}
-			});
+				btnFindGpsTime.click( () => {
+					console.debug('[Sidebar] btnFindGpsTime clicked, targetTime=', targetTime);
+					if(targetTime !== null){
+						viewer.moveToGpsTimeVicinity(targetTime);
+					}
+				});
 		}
 
 	}
@@ -1026,6 +1146,7 @@ export class Sidebar{
 				precision: 1,
 				slide: (event) => {
 					let values = event.values;
+					console.debug('[Sidebar] pointsource slider slide values=', values);
 					this.viewer.setFilterPointSourceIDRange(values[0], values[1]);
 				}
 			});
@@ -1086,6 +1207,9 @@ export class Sidebar{
 	initClassificationList(){
 		let elClassificationList = $('#classificationList');
 
+		// ensure idempotence: clear container before populating to avoid duplicates
+		elClassificationList.empty();
+
 		let addClassificationItem = (code, name) => {
 			const classification = this.viewer.classifications[code];
 			const inputID = 'chkClassification_' + code;
@@ -1107,6 +1231,7 @@ export class Sidebar{
 			const elColorPicker = element.find(`#${colorPickerID}`);
 
 			elInput.click(event => {
+				console.debug('[Sidebar] classification checkbox clicked, code=', code, 'checked=', event.target.checked);
 				this.viewer.setClassificationVisibility(code, event.target.checked);
 			});
 
@@ -1149,6 +1274,7 @@ export class Sidebar{
 			let elInput = element.find('input');
 
 			elInput.click(event => {
+				console.debug('[Sidebar] toggleClassificationFilters clicked, value=', event.target.checked);
 				this.viewer.toggleAllClassificationsVisibility();
 			});
 
@@ -1165,8 +1291,8 @@ export class Sidebar{
 			let elInput = element.find('input');
 
 			elInput.click( () => {
+				console.debug('[Sidebar] invert classifications clicked');
 				const classifications = this.viewer.classifications;
-	
 				for(let key of Object.keys(classifications)){
 					let value = classifications[key];
 					this.viewer.setClassificationVisibility(key, !value.visible);
@@ -1177,6 +1303,7 @@ export class Sidebar{
 		};
 
 		const populate = () => {
+			elClassificationList.empty();
 			addToggleAllButton();
 			for (let classID in this.viewer.classifications) {
 				addClassificationItem(classID, this.viewer.classifications[classID].name);
@@ -1184,39 +1311,44 @@ export class Sidebar{
 			addInvertButton();
 		};
 
+		// run initial populate
 		populate();
 
-		this.viewer.addEventListener("classifications_changed", () => {
-			elClassificationList.empty();
-			populate();
-		});
+		// attach event listeners only once
+		if(!this._classificationListEventsAttached){
+			this._classificationListEventsAttached = true;
 
-		this.viewer.addEventListener("classification_visibility_changed", () => {
+			this.viewer.addEventListener("classifications_changed", () => {
+				populate();
+			});
 
-			{ // set checked state of classification buttons
-				for(const classID of Object.keys(this.viewer.classifications)){
-					const classValue = this.viewer.classifications[classID];
+			this.viewer.addEventListener("classification_visibility_changed", () => {
 
-					let elItem = elClassificationList.find(`#chkClassification_${classID}`);
-					elItem.prop("checked", classValue.visible);
-				}
-			}
+				{ // set checked state of classification buttons
+					for(const classID of Object.keys(this.viewer.classifications)){
+						const classValue = this.viewer.classifications[classID];
 
-			{ // set checked state of toggle button based on state of all other buttons
-				let numVisible = 0;
-				let numItems = 0;
-				for(const key of Object.keys(this.viewer.classifications)){
-					if(this.viewer.classifications[key].visible){
-						numVisible++;
+						let elItem = elClassificationList.find(`#chkClassification_${classID}`);
+						elItem.prop("checked", classValue.visible);
 					}
-					numItems++;
 				}
-				const allVisible = numVisible === numItems;
 
-				let elToggle = elClassificationList.find("#toggleClassificationFilters");
-				elToggle.prop("checked", allVisible);
-			}
-		});
+				{ // set checked state of toggle button based on state of all other buttons
+					let numVisible = 0;
+					let numItems = 0;
+					for(const key of Object.keys(this.viewer.classifications)){
+						if(this.viewer.classifications[key].visible){
+							numVisible++;
+						}
+						numItems++;
+					}
+					const allVisible = numVisible === numItems;
+
+					let elToggle = elClassificationList.find("#toggleClassificationFilters");
+					elToggle.prop("checked", allVisible);
+				}
+			});
+		}
 	}
 
 	initAccordion(){
@@ -1364,6 +1496,55 @@ export class Sidebar{
 		$('#chkEDLEnabled').click( () => {
 			this.viewer.setEDLEnabled($('#chkEDLEnabled').prop("checked"));
 		});
+
+		// Apply saved appearance preferences (if any)
+		const loadedPrefs = this.loadAppearancePrefs();
+		console.debug('initAppearance: loaded appearance prefs ->', loadedPrefs);
+		this.applyAppearancePrefs(loadedPrefs);
+
+		// Add Save Appearance Preferences button dynamically so it lives inside the
+		// Appearance panel and is created at the same time the controls are.
+		{
+			// try selectors; prefer the inner content wrapper so appended block sits with other controls
+			const selectors = ['#styled-appearance .space-y-4', '#styled-appearance', '#appearance', '#appearance-panel', '#styledAppearance'];
+			let container = $();
+			for(const s of selectors){
+				const c = this.dom.find(s);
+				if(c && c.length){ container = c; break; }
+			}
+
+			console.debug('initAppearance: chosen container selector ->', container && container.length ? container[0] : null);
+			if(container && container.length){
+				// create a small footer area with the save button
+				const saveBlock = $(
+					`<div class="potree-appearance-save" style="border-top:1px solid rgba(0,0,0,0.08);padding:8px 10px;margin-top:8px;">
+						<div style="display:flex;justify-content:flex-end;width:100%;">
+							<button id="btnSaveAppearancePrefs" style="display:inline-block;padding:8px 12px;background:#2563eb;color:#fff;font-size:0.875rem;border-radius:0.375rem;border:1px solid #1e40af;">Save Appearance</button>
+						</div>
+					</div>`
+				);
+				container.append(saveBlock);
+
+				// Attach handler immediately to avoid init-order races
+				const btn = saveBlock.find('#btnSaveAppearancePrefs')[0];
+				if(btn){
+					btn.addEventListener('click', () => {
+						const prefs = this.collectAppearancePrefs();
+						this.saveAppearancePrefs(prefs);
+						console.info('Appearance preferences saved', prefs);
+						// short visual feedback
+						const old = btn.innerText;
+						btn.innerText = 'Saved';
+						setTimeout(() => btn.innerText = old, 1200);
+					});
+					console.debug('initAppearance: Save button created and handler attached');
+				} else {
+					console.warn('initAppearance: Save button element not found after append');
+				}
+			} else {
+				console.warn('initAppearance: no container found for Save button, selectors tried:', selectors);
+			}
+		}
 	}
 
 	initNavigation(){
@@ -1559,6 +1740,56 @@ export class Sidebar{
 		$('#set_freeze').click(() => {
 			this.viewer.setFreeze($('#set_freeze').prop("checked"));
 		});
+
+
+	}
+
+	collectAppearancePrefs(){
+		return {
+			pointBudget: this.viewer.getPointBudget(),
+			fov: this.viewer.getFOV(),
+			edlEnabled: this.viewer.getEDLEnabled(),
+			edlRadius: this.viewer.getEDLRadius(),
+			edlStrength: this.viewer.getEDLStrength(),
+			edlOpacity: this.viewer.getEDLOpacity(),
+			background: this.viewer.getBackground(),
+			minNodeSize: this.viewer.getMinNodeSize(),
+			moveSpeed: this.viewer.getMoveSpeed(),
+			showBoundingBox: this.viewer.getShowBoundingBox(),
+			freeze: this.viewer.getFreeze(),
+			splatQuality: this.viewer.useHQ ? 'hq' : 'standard'
+		};
+	}
+
+	saveAppearancePrefs(prefs){
+		try{
+			localStorage.setItem('potree.appearancePrefs.v1', JSON.stringify(prefs));
+		}catch(e){ console.warn('Failed to save appearance preferences', e); }
+	}
+
+	loadAppearancePrefs(){
+		try{
+			const raw = localStorage.getItem('potree.appearancePrefs.v1');
+			if(!raw) return null;
+			return JSON.parse(raw);
+		}catch(e){ console.warn('Failed to load appearance preferences', e); return null; }
+	}
+
+	applyAppearancePrefs(prefs){
+		if(!prefs) return;
+		// apply values to viewer (use setters so events keep UI in sync)
+		if(typeof prefs.pointBudget === 'number') this.viewer.setPointBudget(prefs.pointBudget);
+		if(typeof prefs.fov === 'number') this.viewer.setFOV(prefs.fov);
+		if(typeof prefs.edlEnabled === 'boolean') this.viewer.setEDLEnabled(prefs.edlEnabled);
+		if(typeof prefs.edlRadius === 'number') this.viewer.setEDLRadius(prefs.edlRadius);
+		if(typeof prefs.edlStrength === 'number') this.viewer.setEDLStrength(prefs.edlStrength);
+		if(typeof prefs.edlOpacity === 'number') this.viewer.setEDLOpacity(prefs.edlOpacity);
+		if(typeof prefs.background === 'string') this.viewer.setBackground(prefs.background);
+		if(typeof prefs.minNodeSize === 'number') this.viewer.setMinNodeSize(prefs.minNodeSize);
+		if(typeof prefs.moveSpeed === 'number') this.viewer.setMoveSpeed(prefs.moveSpeed);
+		if(typeof prefs.showBoundingBox === 'boolean') this.viewer.setShowBoundingBox(prefs.showBoundingBox);
+		if(typeof prefs.freeze === 'boolean') this.viewer.setFreeze(prefs.freeze);
+		if(typeof prefs.splatQuality === 'string') this.viewer.useHQ = (prefs.splatQuality === 'hq');
 	}
 
 }

@@ -515,6 +515,11 @@ vec3 getSourceID(){
 	return texture2D(gradient, vec2(w,1.0 - w)).rgb;
 }
 
+vec3 getStemcls(){
+	float w = mod(aExtra, 10.0) / 10.0;
+	return texture2D(gradient, vec2(w, 1.0 - w)).rgb;
+}
+
 vec3 getCompositeColor(){
 	vec3 c;
 	float w;
@@ -581,22 +586,9 @@ vec3 getMatcap(){
 #endif
 
 vec3 getExtra(){
-
 	float w = (aExtra + uExtraOffset) * uExtraScale;
 	w = clamp(w, 0.0, 1.0);
-
 	vec3 color = texture2D(gradient, vec2(w,1.0-w)).rgb;
-
-	// vec2 r = uExtraNormalizedRange;
-
-	// float w = aExtra * (r.y - r.x) + r.x;
-
-	// w = (w - uExtraRange.x) / (uExtraRange.y - uExtraRange.x);
-
-	// w = clamp(w, 0.0, 1.0);
-
-	// vec3 color = texture2D(gradient, vec2(w,1.0-w)).rgb;
-
 	return color;
 }
 
@@ -652,6 +644,12 @@ vec3 getColor(){
 		color = getCompositeColor();
 	#elif defined color_type_matcap
 		color = getMatcap();
+	#elif defined color_type_stemcls
+		color = getStemcls();
+	#elif defined color_type_stemoff
+		color = getStemcls();
+	#elif defined color_type_itc
+		color = getStemcls();
 	#else 
 		color = getExtra();
 	#endif
