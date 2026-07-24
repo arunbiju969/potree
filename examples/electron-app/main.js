@@ -4,6 +4,10 @@ const fs = require('fs');
 const { pathToFileURL } = require('url');
 const { fileURLToPath } = require('url');
 
+// Disable GPU shader disk cache to avoid cache lock warnings on Windows
+app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
+
+
 function createWindow () {
   const win = new BrowserWindow({
     width: 1280,
