@@ -13,6 +13,7 @@
     },
     "tt": {
         "angle_measurement": "Winkelmessung",
+        "inspect_point": "Punkt inspizieren: Punkt anklicken, um seine Attribute anzuzeigen",
         "distance_measurement": "Abstandsmessung",
         "area_measurement": "Flächenmessung",
         "volume_measurement": "Volumenmessung",

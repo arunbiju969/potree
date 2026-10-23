@@ -1004,6 +1004,37 @@ export class Renderer {
 
 					shader.setUniform1f("uExtraScale", scale);
 					shader.setUniform1f("uExtraOffset", offset);					
+
+					if(material.isDiscreteAttribute !== undefined && material.isDiscreteAttribute(attName)){
+						// categorical colouring: index the discrete LUT by the raw attribute value.
+						// The decoder workers either store the raw value (offset = 0, scale = 1) or a
+						// value normalised into the attributes range. Inverting that transform gives the
+						// original value, independent of the point cloud format.
+						const scheme = material.getDiscreteScheme(attName);
+
+						let workerScale = 1;
+						let workerOffset = 0;
+
+						if(bufferAttribute !== undefined && bufferAttribute.potree){
+							if(bufferAttribute.potree.scale){
+								workerScale = 1 / bufferAttribute.potree.scale;
+							}
+
+							if(bufferAttribute.potree.offset !== undefined && bufferAttribute.potree.offset !== null){
+								workerOffset = bufferAttribute.potree.offset;
+							}
+						}
+
+						workerScale = Number.isNaN(workerScale) ? 1 : workerScale;
+						workerOffset = Number.isNaN(workerOffset) ? 0 : workerOffset;
+
+						let count = (scheme.max - scheme.min) + 1;
+
+						shader.setUniform2f("uDiscreteRange", [scheme.min, scheme.max]);
+						shader.setUniform1f("uDiscreteCount", count);
+						shader.setUniform1f("uDiscreteScale", workerScale);
+						shader.setUniform1f("uDiscreteOffset", workerOffset);
+					}
 				}
 
 			}else{
@@ -1362,6 +1393,17 @@ export class Renderer {
 			gl.activeTexture(gl.TEXTURE0 + currentTextureBindingPoint);
 			gl.bindTexture(classificationTexture.target, classificationTexture.id);
 			currentTextureBindingPoint++;
+
+			if(material.discreteLUTTexture){
+				let discreteTexture = this.textures.get(material.discreteLUTTexture);
+
+				if(discreteTexture){
+					shader.setUniform1i("uDiscreteLUT", currentTextureBindingPoint);
+					gl.activeTexture(gl.TEXTURE0 + currentTextureBindingPoint);
+					gl.bindTexture(discreteTexture.target, discreteTexture.id);
+					currentTextureBindingPoint++;
+				}
+			}
 
 			let matcapTexture = this.textures.get(material.matcapTexture);
 			shader.setUniform1i("matcapTextureUniform", currentTextureBindingPoint);

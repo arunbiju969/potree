@@ -9,6 +9,7 @@ import {Volume, BoxVolume, SphereVolume} from "../../utils/Volume.js";
 import {CameraAnimation} from "../../modules/CameraAnimation/CameraAnimation.js";
 import {PointSizeType, PointShape, ElevationGradientRepeat} from "../../defines.js";
 import {Gradients} from "../../materials/Gradients.js";
+import {PointCloudMaterial} from "../../materials/PointCloudMaterial.js";
 
 import {MeasurePanel} from "./MeasurePanel.js";
 import {DistancePanel} from "./DistancePanel.js";
@@ -105,6 +106,11 @@ export class PropertiesPanel{
 			if(typeof prefs.colorHex === 'string'){
 				try{ material.color.set(prefs.colorHex); }catch(e){}
 			}
+			if(prefs.discreteSchemes && typeof prefs.discreteSchemes === 'object' && material.setDiscreteScheme){
+				for(let attributeName of Object.keys(prefs.discreteSchemes)){
+					material.setDiscreteScheme(attributeName, prefs.discreteSchemes[attributeName]);
+				}
+			}
 			// Notify listeners so UI widgets update to reflect new values
 			if(material.dispatchEvent){
 				// generic material property change
@@ -119,6 +125,26 @@ export class PropertiesPanel{
 				material.dispatchEvent({type: 'color_changed'});
 			}
 		}catch(e){ console.warn('[PropertiesPanel] failed to apply prefs', e); }
+	}
+
+	// Categorical (discrete) color schemes of a material, as a plain serializable object
+	getDiscreteSchemesPrefs(material){
+		const schemes = {};
+
+		if(!material || !material.discreteSchemes){
+			return schemes;
+		}
+
+		for(let [attributeName, scheme] of material.discreteSchemes){
+			schemes[attributeName] = {
+				enabled: scheme.enabled === true,
+				min: scheme.min,
+				max: scheme.max,
+				values: scheme.values,
+			};
+		}
+
+		return schemes;
 	}
 
 	set(object){
@@ -252,6 +278,25 @@ export class PropertiesPanel{
 						<span>Gradient Scheme:</span>
 						<div id="extra_gradient_scheme_selection" class="gradient_scheme" style="display: flex; padding: 1em 0em">
 						</div>
+					</li>
+				</div>
+
+				<div id="materials.discrete_container">
+					<div class="divider">
+						<span>Categorical Colors</span>
+					</div>
+
+					<li>
+						<label><input id="chkDiscreteColors" type="checkbox" /><span>One unique color per value</span></label>
+					</li>
+
+					<li style="display: flex; gap: 6px;">
+						<button id="btnDiscreteAutoPalette" class="ui-button ui-widget ui-corner-all" style="flex-grow: 1">Distinct palette</button>
+						<button id="btnDiscreteShowAll" class="ui-button ui-widget ui-corner-all" style="flex-grow: 1">Show all</button>
+					</li>
+
+					<li>
+						<ul id="discreteColorList" style="list-style: none; padding-left: 0px; margin: 4px 0px;"></ul>
 					</li>
 				</div>
 				
@@ -393,7 +438,8 @@ export class PropertiesPanel{
 					backfaceCulling: material.backfaceCulling,
 					activeAttributeName: material.activeAttributeName,
 					rgbGamma: material.rgbGamma,
-					colorHex: `#${material.color.getHexString()}`
+					colorHex: `#${material.color.getHexString()}`,
+					discreteSchemes: this.getDiscreteSchemesPrefs(material)
 				};
 				this.savePointCloudPrefs(pointcloud, prefs);
 				console.debug('[PropertiesPanel] Save button clicked, key=', this.getPointCloudKey(pointcloud), 'prefs=', prefs);
@@ -415,7 +461,8 @@ export class PropertiesPanel{
 					backfaceCulling: material.backfaceCulling,
 					activeAttributeName: material.activeAttributeName,
 					rgbGamma: material.rgbGamma,
-					colorHex: `#${material.color.getHexString()}`
+					colorHex: `#${material.color.getHexString()}`,
+					discreteSchemes: this.getDiscreteSchemesPrefs(material)
 				};
 				this.saveGlobalPointCloudPrefs(prefs);
 				console.debug('[PropertiesPanel] Save GLOBAL clicked, prefs=', prefs);
@@ -598,6 +645,160 @@ export class PropertiesPanel{
 				attributeSelection.append(elOption);
 			}
 
+			//
+			// Categorical (classification style) colouring for custom scalar attributes,
+			// e.g. a semantic segmentation field with a handful of distinct values.
+			//
+			const blockDiscrete = panel.find(`#materials\\.discrete_container`);
+			const elDiscreteToggle = panel.find('#chkDiscreteColors');
+			const elDiscreteList = panel.find('#discreteColorList');
+
+			const builtinAttributes = [
+				"position", "POSITION_CARTESIAN", "rgba", "rgb", "color", "normal", "indices",
+				"intensity", "classification", "gps-time", "return number", "number of returns",
+				"source id", "point source id", "elevation", "height",
+			];
+
+			const isCategoricalAttribute = (attribute) => {
+				if(!attribute){
+					return false;
+				}
+
+				if(builtinAttributes.includes(attribute.name)){
+					return false;
+				}
+
+				if(attribute.numElements !== 1){
+					return false;
+				}
+
+				let typeName = attribute.type ? attribute.type.name : undefined;
+
+				if(!["int8", "uint8", "int16", "uint16", "int32", "uint32"].includes(typeName)){
+					return false;
+				}
+
+				if(!attribute.range){
+					return false;
+				}
+
+				let [min, max] = attribute.range;
+
+				if(!Number.isFinite(min) || !Number.isFinite(max)){
+					return false;
+				}
+
+				if(min !== Math.round(min) || max !== Math.round(max)){
+					return false;
+				}
+
+				let numValues = (max - min) + 1;
+
+				return numValues >= 1 && numValues <= 256;
+			};
+
+			const discreteColorToHex = (color) => {
+				let c = new THREE.Color(color[0], color[1], color[2]);
+
+				return `#${c.getHexString()}`;
+			};
+
+			const ensureDiscreteScheme = (attribute) => {
+				if(!attribute){
+					return null;
+				}
+
+				let min = Math.round(attribute.range[0]);
+				let max = Math.round(attribute.range[1]);
+				let numValues = (max - min) + 1;
+
+				let scheme = material.getDiscreteScheme(attribute.name);
+
+				if(scheme && scheme.min === min && scheme.max === max){
+					return scheme;
+				}
+
+				let palette = PointCloudMaterial.generateDiscretePalette(numValues);
+				let newScheme = PointCloudMaterial.createDiscreteScheme(min, max, { palette });
+
+				if(scheme){
+					// keep the colors, names and visibility the user already set
+					for(let key of Object.keys(scheme.values)){
+						let value = parseInt(key);
+
+						if(newScheme.values[value] !== undefined){
+							newScheme.values[value].color = scheme.values[key].color;
+							newScheme.values[value].visible = scheme.values[key].visible;
+							newScheme.values[value].name = scheme.values[key].name;
+						}
+					}
+
+					newScheme.enabled = scheme.enabled;
+				}else{
+					// attributes with only a few distinct values are categorical by default
+					newScheme.enabled = numValues <= 64;
+				}
+
+				material.setDiscreteScheme(attribute.name, newScheme);
+
+				return newScheme;
+			};
+
+			const renderDiscreteList = (attribute) => {
+				elDiscreteList.empty();
+
+				let scheme = material.getDiscreteScheme(attribute.name);
+
+				if(!scheme){
+					return;
+				}
+
+				let values = Object.keys(scheme.values).map(v => parseInt(v)).sort((a, b) => a - b);
+
+				for(let value of values){
+					let entry = scheme.values[value];
+
+					let elItem = $(`
+						<li style="display: flex; align-items: center; gap: 6px; padding: 2px 0px;">
+							<input type="checkbox" style="flex: 0 0 auto;" />
+							<span style="flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></span>
+							<input type="text" style="width: 44px; zoom: 0.6; flex: 0 0 auto;" />
+						</li>
+					`);
+
+					let elVisible = elItem.find('input[type="checkbox"]');
+					let elName = elItem.find('span');
+					let elColor = elItem.find('input[type="text"]');
+
+					elVisible.prop('checked', entry.visible !== false);
+					elName.text(`${value} - ${entry.name}`);
+					elName.attr('title', `${attribute.name} = ${value}`);
+
+					elVisible.change(() => {
+						entry.visible = elVisible.is(':checked');
+						material.recomputeDiscreteLUT(attribute.name);
+					});
+
+					let setColor = (color) => {
+						let rgb = color.toRgb();
+						entry.color = [rgb.r / 255, rgb.g / 255, rgb.b / 255, 1];
+						material.recomputeDiscreteLUT(attribute.name);
+					};
+
+					elColor.spectrum({
+						color: discreteColorToHex(entry.color),
+						showInput: true,
+						preferredFormat: 'hex',
+						cancelText: '',
+						chooseText: 'Apply',
+						move: setColor,
+						change: setColor,
+					});
+
+					elDiscreteList.append(elItem);
+				}
+			};
+
 			let updateMaterialPanel = (event, ui) => {
 				let selectedValue = attributeSelection.selectmenu().val();
 				material.activeAttributeName = selectedValue;
@@ -712,9 +913,67 @@ export class PropertiesPanel{
 				} else{
 					blockExtra.css('display', 'block');
 				}
+
+				// categorical (one unique color per value) controls
+				blockDiscrete.css('display', 'none');
+
+				if(isCategoricalAttribute(attribute)){
+					ensureDiscreteScheme(attribute);
+
+					let discreteEnabled = material.isDiscreteAttribute(attribute.name);
+
+					blockDiscrete.css('display', 'block');
+					elDiscreteToggle.prop('checked', discreteEnabled);
+					renderDiscreteList(attribute);
+
+					if(discreteEnabled){
+						// the gradient and its range slider have no effect on categorical colors
+						blockExtra.css('display', 'none');
+					}
+				}
 			};
 
 			attributeSelection.selectmenu({change: updateMaterialPanel});
+
+			elDiscreteToggle.change(() => {
+				let selectedValue = attributeSelection.selectmenu().val();
+				material.setDiscreteColorsEnabled(selectedValue, elDiscreteToggle.is(':checked'));
+			});
+
+			panel.find('#btnDiscreteAutoPalette').click(() => {
+				let selectedValue = attributeSelection.selectmenu().val();
+				let scheme = material.getDiscreteScheme(selectedValue);
+
+				if(!scheme){
+					return;
+				}
+
+				let values = Object.keys(scheme.values).map(v => parseInt(v)).sort((a, b) => a - b);
+				let palette = PointCloudMaterial.generateDiscretePalette(values.length);
+
+				for(let i = 0; i < values.length; i++){
+					scheme.values[values[i]].color = palette[i];
+				}
+
+				material.setDiscreteScheme(selectedValue, scheme);
+				renderDiscreteList(pointcloud.getAttribute(selectedValue));
+			});
+
+			panel.find('#btnDiscreteShowAll').click(() => {
+				let selectedValue = attributeSelection.selectmenu().val();
+				let scheme = material.getDiscreteScheme(selectedValue);
+
+				if(!scheme){
+					return;
+				}
+
+				for(let key of Object.keys(scheme.values)){
+					scheme.values[key].visible = true;
+				}
+
+				material.setDiscreteScheme(selectedValue, scheme);
+				renderDiscreteList(pointcloud.getAttribute(selectedValue));
+			});
 
 			let update = () => {
 				attributeSelection.val(material.activeAttributeName).selectmenu('refresh');

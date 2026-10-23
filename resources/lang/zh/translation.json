@@ -15,6 +15,7 @@
 	},
 	"tt": {
 		"angle_measurement": "角度量测",
+		"inspect_point": "检查点：点击一个点以显示其属性",
 		"point_measurement": "点量测",
 		"distance_measurement": "距离量测",
 		"height_measurement": "高度量测",

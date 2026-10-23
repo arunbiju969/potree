@@ -27,6 +27,7 @@ export class Sidebar{
 		this.measuringTool = viewer.measuringTool;
 		this.profileTool = viewer.profileTool;
 		this.volumeTool = viewer.volumeTool;
+		this.inspectionTool = viewer.inspectionTool;
 
 		this.dom = $("#sidebar_root");
 	}
@@ -62,8 +63,37 @@ export class Sidebar{
 
 	initToolbar(){
 
-		// ANGLE
+		// INSPECT POINT
 		let elToolbar = $('#tools');
+		let elInspectionToolbar = $('#inspection_tools');
+
+		{
+			let elInspectTool = this.createToolIcon(
+				Potree.resourcePath + '/icons/focus.svg',
+				'[title]tt.inspect_point',
+				() => {
+					this.inspectionTool.toggle();
+				});
+
+			let updateInspectToolIcon = () => {
+				if(this.inspectionTool.isActive()){
+					elInspectTool.css({
+						'background': 'rgba(255, 204, 51, 0.45)',
+						'border-radius': '4px',
+						'outline': '1px solid rgba(255, 204, 51, 0.8)',
+					});
+				}else{
+					elInspectTool.css({'background': '', 'border-radius': '', 'outline': ''});
+				}
+			};
+
+			this.inspectionTool.addEventListener('started', updateInspectToolIcon);
+			this.inspectionTool.addEventListener('stopped', updateInspectToolIcon);
+
+			elInspectionToolbar.append(elInspectTool);
+		}
+
+		// ANGLE
 		elToolbar.append(this.createToolIcon(
 			Potree.resourcePath + '/icons/angle.png',
 			'[title]tt.angle_measurement',

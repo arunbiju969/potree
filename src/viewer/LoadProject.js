@@ -46,6 +46,12 @@ function loadPointCloud(viewer, data){
 				target.matcap = data.material.matcap;
 			}
 
+			if(data.material.discreteSchemes != null && target.setDiscreteScheme != null){
+				for(let attributeName of Object.keys(data.material.discreteSchemes)){
+					target.setDiscreteScheme(attributeName, data.material.discreteSchemes[attributeName]);
+				}
+			}
+
 		}else if(data.activeAttributeName != null){
 			target.activeAttributeName = data.activeAttributeName;
 		}else{

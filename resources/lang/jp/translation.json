@@ -13,6 +13,7 @@
     },
     "tt": {
         "angle_measurement": "角度測定",
+        "inspect_point": "ポイント検査：ポイントをクリックすると属性を表示します",
         "distance_measurement": "距離測定",
         "height_measurement": "標高測定",
         "area_measurement": "面積測定",

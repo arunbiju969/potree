@@ -1,5 +1,24 @@
 
 
+function saveDiscreteSchemes(material){
+	const schemes = {};
+
+	if(material.discreteSchemes === undefined){
+		return schemes;
+	}
+
+	for(let [attributeName, scheme] of material.discreteSchemes){
+		schemes[attributeName] = {
+			enabled: scheme.enabled === true,
+			min: scheme.min,
+			max: scheme.max,
+			values: scheme.values,
+		};
+	}
+
+	return schemes;
+}
+
 function createPointcloudData(pointcloud) {
 
 	let material = pointcloud.material;
@@ -35,6 +54,7 @@ function createPointcloudData(pointcloud) {
 		minSize: material.minSize,
 		pointSizeType: pointSizeTypeName,
 		matcap: material.matcap,
+		discreteSchemes: saveDiscreteSchemes(material),
 	};
 
 	const pcdata = {

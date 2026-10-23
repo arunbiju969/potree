@@ -15,6 +15,7 @@
 	},
 	"tt": {
 		"angle_measurement": "Vinkelmätning",
+		"inspect_point": "Inspektera punkt: klicka på en punkt för att visa dess attribut",
 		"point_measurement": "Punktmätning",
 		"distance_measurement": "Distansmätning",
 		"height_measurement": "Höjdmätning",

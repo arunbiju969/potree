@@ -67,6 +67,22 @@ export class PointCloudMaterial extends THREE.RawShaderMaterial {
 			this.classificationTexture = texture;
 		}
 
+		{ // lookup table for categorical (classification style) colouring of custom attributes
+			const [width, height] = [256, 1];
+			let data = new Uint8Array(width * 4);
+			data.fill(255);
+			let texture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat);
+			texture.magFilter = THREE.NearestFilter;
+			texture.minFilter = THREE.NearestFilter;
+			texture.generateMipmaps = false;
+			texture.needsUpdate = true;
+
+			this.discreteLUTTexture = texture;
+
+			// attributeName -> { enabled, min, max, values: { [value]: { color, visible, name } } }
+			this.discreteSchemes = new Map();
+		}
+
 		this.attributes = {
 			position: { type: 'fv', value: [] },
 			color: { type: 'fv', value: [] },
@@ -112,6 +128,11 @@ export class PointCloudMaterial extends THREE.RawShaderMaterial {
 			pcIndex:			{ type: "f", value: 0 },
 			gradient:			{ type: "t", value: this.gradientTexture },
 			classificationLUT:	{ type: "t", value: this.classificationTexture },
+			uDiscreteLUT:		{ type: "t", value: this.discreteLUTTexture },
+			uDiscreteRange:		{ type: "2fv", value: [0, 1] },
+			uDiscreteCount:		{ type: "f", value: 2 },
+			uDiscreteScale:		{ type: "f", value: 1 },
+			uDiscreteOffset:	{ type: "f", value: 0 },
 			uHQDepthMap:		{ type: "t", value: null },
 			toModel:			{ type: "Matrix4f", value: [] },
 			diffuse:			{ type: "fv", value: [1, 1, 1] },
@@ -256,6 +277,10 @@ export class PointCloudMaterial extends THREE.RawShaderMaterial {
 			let attributeName = this.activeAttributeName.replace(/[^a-zA-Z0-9]/g, '_');
 
 			defines.push(`#define color_type_${attributeName}`);
+
+			if(this.isDiscreteAttribute(this.activeAttributeName)){
+				defines.push('#define discrete_colors');
+			}
 		}
 		
 		if(this._treeType === TreeType.OCTREE){
@@ -425,6 +450,215 @@ export class PointCloudMaterial extends THREE.RawShaderMaterial {
 		}
 	}
 
+	/**
+	 * Is the given attribute currently rendered with categorical (classification style) colors?
+	 */
+	isDiscreteAttribute (attributeName) {
+		const scheme = this.discreteSchemes.get(attributeName);
+
+		return scheme !== undefined && scheme.enabled === true;
+	}
+
+	/**
+	 * Returns the categorical color scheme of an attribute, or undefined.
+	 * scheme = { enabled, min, max, values: { [value]: { color: [r, g, b, a], visible, name } } }
+	 */
+	getDiscreteScheme (attributeName) {
+		return this.discreteSchemes.get(attributeName);
+	}
+
+	getDiscreteValues (attributeName) {
+		const scheme = this.discreteSchemes.get(attributeName);
+
+		if(!scheme){
+			return [];
+		}
+
+		const values = [];
+
+		for(let value = scheme.min; value <= scheme.max; value++){
+			values.push(value);
+		}
+
+		return values;
+	}
+
+	setDiscreteScheme (attributeName, scheme) {
+		if(scheme === null || scheme === undefined){
+			this.discreteSchemes.delete(attributeName);
+		}else{
+			scheme.min = Math.round(scheme.min);
+			scheme.max = Math.round(scheme.max);
+			this.discreteSchemes.set(attributeName, scheme);
+		}
+
+		if(this.activeAttributeName === attributeName){
+			this.recomputeDiscreteLUT(attributeName);
+			this.updateShaderSource();
+		}
+
+		this.dispatchEvent({
+			type: 'discrete_scheme_changed',
+			target: this,
+			attributeName: attributeName
+		});
+
+		this.dispatchEvent({
+			type: 'material_property_changed',
+			target: this
+		});
+	}
+
+	setDiscreteColorsEnabled (attributeName, enabled) {
+		let scheme = this.discreteSchemes.get(attributeName);
+
+		if(!scheme){
+			if(!enabled){
+				return;
+			}
+
+			this.discreteSchemes.set(attributeName, PointCloudMaterial.createDiscreteScheme(0, 1));
+		}else{
+			scheme.enabled = enabled === true;
+		}
+
+		if(this.activeAttributeName === attributeName){
+			this.recomputeDiscreteLUT(attributeName);
+			this.updateShaderSource();
+		}
+
+		this.dispatchEvent({
+			type: 'discrete_scheme_changed',
+			target: this,
+			attributeName: attributeName
+		});
+
+		this.dispatchEvent({
+			type: 'material_property_changed',
+			target: this
+		});
+	}
+
+	recomputeDiscreteLUT (attributeName = this.activeAttributeName) {
+		const data = this.discreteLUTTexture.image.data;
+		const scheme = attributeName !== null && attributeName !== undefined
+			? this.discreteSchemes.get(attributeName)
+			: undefined;
+
+		let valuesChanged = false;
+
+		for(let i = 0; i < 256; i++){
+			let color = [0.5, 0.5, 0.5, 1.0];
+			let visible = true;
+
+			if(scheme){
+				const entry = scheme.values[scheme.min + i];
+
+				if(entry){
+					color = entry.color;
+					visible = entry.visible !== false;
+				}
+			}
+
+			const r = parseInt(255 * color[0]);
+			const g = parseInt(255 * color[1]);
+			const b = parseInt(255 * color[2]);
+			const a = visible ? 255 : 0;
+
+			if(data[4 * i + 0] !== r){
+				data[4 * i + 0] = r;
+				valuesChanged = true;
+			}
+
+			if(data[4 * i + 1] !== g){
+				data[4 * i + 1] = g;
+				valuesChanged = true;
+			}
+
+			if(data[4 * i + 2] !== b){
+				data[4 * i + 2] = b;
+				valuesChanged = true;
+			}
+
+			if(data[4 * i + 3] !== a){
+				data[4 * i + 3] = a;
+				valuesChanged = true;
+			}
+		}
+
+		if(valuesChanged){
+			this.discreteLUTTexture.needsUpdate = true;
+
+			this.dispatchEvent({
+				type: 'material_property_changed',
+				target: this
+			});
+		}
+	}
+
+	/**
+	 * Creates a categorical scheme for the integer values in [min, max].
+	 */
+	static createDiscreteScheme (min, max, { names = {}, palette = null } = {}) {
+		min = Math.round(min);
+		max = Math.round(max);
+
+		const count = Math.max(1, Math.min(256, max - min + 1));
+		const colors = palette || PointCloudMaterial.generateDiscretePalette(count);
+
+		const values = {};
+
+		for(let i = 0; i < count; i++){
+			const value = min + i;
+
+			values[value] = {
+				color: colors[i],
+				visible: true,
+				name: (names[value] !== undefined) ? names[value] : `${value}`,
+			};
+		}
+
+		return { enabled: true, min, max: min + count - 1, values };
+	}
+
+	/**
+	 * Maximally separated colors, using the golden angle in hue space.
+	 */
+	static generateDiscretePalette (count) {
+		const colors = [];
+
+		for(let i = 0; i < count; i++){
+			const hue = (i * 0.618033988749895) % 1.0;
+			const saturation = 0.9;
+			const value = (i % 2 === 0) ? 1.0 : 0.72;
+
+			colors.push(PointCloudMaterial.hsvToRgb(hue, saturation, value));
+		}
+
+		return colors;
+	}
+
+	static hsvToRgb (h, s, v) {
+		let i = Math.floor(h * 6);
+		let f = h * 6 - i;
+		let p = v * (1 - s);
+		let q = v * (1 - f * s);
+		let t = v * (1 - (1 - f) * s);
+
+		let r, g, b;
+
+		switch(i % 6){
+			case 0: [r, g, b] = [v, t, p]; break;
+			case 1: [r, g, b] = [q, v, p]; break;
+			case 2: [r, g, b] = [p, v, t]; break;
+			case 3: [r, g, b] = [p, q, v]; break;
+			case 4: [r, g, b] = [t, p, v]; break;
+			default: [r, g, b] = [v, p, q]; break;
+		}
+
+		return [r, g, b, 1.0];
+	}
+
 	get spacing () {
 		return this.uniforms.spacing.value;
 	}
@@ -563,6 +797,7 @@ export class PointCloudMaterial extends THREE.RawShaderMaterial {
 		if (this._activeAttributeName !== value) {
 			this._activeAttributeName = value;
 
+			this.recomputeDiscreteLUT(value);
 			this.updateShaderSource();
 			this.dispatchEvent({
 				type: 'active_attribute_changed',

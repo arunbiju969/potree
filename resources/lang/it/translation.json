@@ -15,6 +15,7 @@
     },
     "tt": {
         "angle_measurement": "Misurazione angolo",
+        "inspect_point": "Ispeziona punto: fai clic su un punto per mostrarne gli attributi",
 		"point_measurement": "Misurazione punto",
         "distance_measurement": "Misurazione distanza",
 		"height_measurement": "Misurazione quota",

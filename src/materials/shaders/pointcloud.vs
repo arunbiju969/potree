@@ -112,6 +112,14 @@ uniform sampler2D visibleNodes;
 uniform sampler2D gradient;
 uniform sampler2D classificationLUT;
 
+#if defined(discrete_colors)
+uniform sampler2D uDiscreteLUT;
+uniform vec2 uDiscreteRange;
+uniform float uDiscreteCount;
+uniform float uDiscreteScale;
+uniform float uDiscreteOffset;
+#endif
+
 #if defined(color_type_matcap)
 uniform sampler2D matcapTextureUniform;
 #endif
@@ -592,6 +600,32 @@ vec3 getExtra(){
 	return color;
 }
 
+/**
+ * Categorical (classification style) colouring for custom scalar attributes.
+ *
+ * aExtra is the value the decoder worker put into the vbo. Depending on the point
+ * cloud format (and on the attribute type) the worker either stores the raw value
+ * (offset = 0, scale = 1) or a value normalised into the attributes initial range.
+ * The renderer passes the inverse of the workers transform via uDiscreteScale /
+ * uDiscreteOffset, so that
+ *
+ *     rawValue = aExtra * uDiscreteScale + uDiscreteOffset
+ *
+ * is the original attribute value for every loader. The value is then mapped onto
+ * the uDiscreteCount entries of uDiscreteLUT, where entry (i - uDiscreteRange.x)
+ * holds the colour of value i.
+ */
+#if defined(discrete_colors)
+vec4 getDiscrete(){
+	float rawValue = aExtra * uDiscreteScale + uDiscreteOffset;
+	float span = max(uDiscreteRange.y - uDiscreteRange.x, 1.0);
+	float index = round((rawValue - uDiscreteRange.x) / span * (uDiscreteCount - 1.0));
+	index = clamp(index, 0.0, 255.0);
+
+	return texture2D(uDiscreteLUT, vec2((index + 0.5) / 256.0, 0.5));
+}
+#endif
+
 vec3 getColor(){
 	vec3 color;
 	
@@ -653,7 +687,11 @@ vec3 getColor(){
 	#elif defined color_type_treefilter
 		color = getStemcls();
 	#else 
-		color = getExtra();
+		#ifdef discrete_colors
+			color = getDiscrete().rgb;
+		#else
+			color = getExtra();
+		#endif
 	#endif
 	
 	if (backfaceCulling && applyBackfaceCulling()) {
@@ -754,6 +792,17 @@ void doClipping(){
 			return;
 		}
 	}
+
+	#if defined(discrete_colors)
+	{ // hide points whose categorical value has been switched off
+		vec4 dc = getDiscrete();
+		if(dc.a == 0.0){
+			gl_Position = vec4(100.0, 100.0, 100.0, 0.0);
+
+			return;
+		}
+	}
+	#endif
 
 	#if defined(clip_return_number_enabled)
 	{ // return number filter

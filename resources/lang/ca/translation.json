@@ -17,6 +17,7 @@
 	},
 	"tt": {
 		"angle_measurement": "Angle",
+		"inspect_point": "Inspecciona el punt: feu clic en un punt per mostrar-ne els atributs",
 		"point_measurement": "Coordenada del punt",
 		"distance_measurement": "Distància",
 		"height_measurement": "Alçada",

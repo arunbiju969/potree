@@ -159,6 +159,10 @@ export class HQSplatRenderer{
 				depthMaterial.uniforms.classificationLUT.value.image.data = material.uniforms.classificationLUT.value.image.data;
 				depthMaterial.classificationTexture.needsUpdate = true;
 
+				depthMaterial.discreteSchemes = material.discreteSchemes;
+				depthMaterial.activeAttributeName = material.activeAttributeName;
+				depthMaterial.recomputeDiscreteLUT();
+
 				depthMaterial.uniforms.uFilterReturnNumberRange.value = material.uniforms.uFilterReturnNumberRange.value;
 				depthMaterial.uniforms.uFilterNumberOfReturnsRange.value = material.uniforms.uFilterNumberOfReturnsRange.value;
 				depthMaterial.uniforms.uFilterGPSTimeClipRange.value = material.uniforms.uFilterGPSTimeClipRange.value;
@@ -201,6 +205,9 @@ export class HQSplatRenderer{
 				attributeMaterial.classification = material.classification;
 				attributeMaterial.uniforms.classificationLUT.value.image.data = material.uniforms.classificationLUT.value.image.data;
 				attributeMaterial.classificationTexture.needsUpdate = true;
+
+				attributeMaterial.discreteSchemes = material.discreteSchemes;
+				attributeMaterial.recomputeDiscreteLUT();
 
 				attributeMaterial.uniforms.uFilterReturnNumberRange.value = material.uniforms.uFilterReturnNumberRange.value;
 				attributeMaterial.uniforms.uFilterNumberOfReturnsRange.value = material.uniforms.uFilterNumberOfReturnsRange.value;

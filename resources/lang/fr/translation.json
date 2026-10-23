@@ -12,6 +12,7 @@
     },
     "tt": {
         "angle_measurement": "Mesurer un angle",
+        "inspect_point": "Inspecter un point : cliquez sur un point pour afficher ses attributs",
         "distance_measurement": "Mesurer une distance",
         "area_measurement": "Mesurer une surface",
         "volume_measurement": "Mesurer un volume",
