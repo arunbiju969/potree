@@ -17,6 +17,10 @@ export class PointCloudMaterial extends THREE.RawShaderMaterial {
 	constructor (parameters = {}) {
 		super();
 
+		// Width is fixed at 2048 because the shaders divide the texel offset by 2048.0
+		// (pointcloud.vs, pointcloud_sm.vs); changing it without those four constants
+		// makes every LOD lookup read the wrong texel and points are drawn far too large.
+		// The renderer clamps the copy instead, so an over-full frame degrades, not crashes.
 		this.visibleNodesTexture = Utils.generateDataTexture(2048, 1, new THREE.Color(0xffffff));
 		this.visibleNodesTexture.minFilter = THREE.NearestFilter;
 		this.visibleNodesTexture.magFilter = THREE.NearestFilter;

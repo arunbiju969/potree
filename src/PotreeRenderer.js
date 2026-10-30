@@ -1104,7 +1104,12 @@ export class Renderer {
 
 				const vnt = material.visibleNodesTexture;
 				const data = vnt.image.data;
-				data.set(visibilityTextureData.data);
+				// The texture has room for a fixed number of nodes, but an aggressive LOD
+				// (high point budget, small minimum node size) can make more of them
+				// visible than that -- a 46M-point cloud has 19,339 nodes.  Copy only what
+				// fits, so the frame degrades instead of throwing RangeError out of the
+				// render loop and taking the viewer down with it.
+				data.set(visibilityTextureData.data.subarray(0, data.length));
 				vnt.needsUpdate = true;
 
 			}
